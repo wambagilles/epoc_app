@@ -1,0 +1,10 @@
+web["A1"].add(50,100).add(60,110).add(70,120)
+web["A2"]. add 40,90 add 45,100 add 55,110
+//^groovy accepts a.b(c,d).e(f) written a. b c,d e f^
+hpc["B1"]. power 60 duration 2 profit 10
+limit[0]=limit[2]=55
+total. power 200 intervals 4
+total.objective "PROFIT"
+//PROFIT to find best profit
+//PROFIT_POWER to find best profit then most power use
+//PROFIT_ONSCHEDULE for best profit, then most important number of hpc placed on schedule
