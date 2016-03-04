@@ -1,0 +1,169 @@
+
+%%%%%%%%%%%%%%%%%%%%%%% file typeinst.tex %%%%%%%%%%%%%%%%%%%%%%%%%
+%
+% This is the LaTeX source for the instructions to authors using
+% the LaTeX document class 'llncs.cls' for contributions to
+% the Lecture Notes in Computer Sciences series.
+% http://www.springer.com/lncs       Springer Heidelberg 2006/05/04
+%
+% It may be used as a template for your own input - copy it
+% to a new file with a new name and use it as the basis
+% for your article.
+%
+% NB: the document class 'llncs' has its own and detailed documentation, see
+% ftp://ftp.springer.de/data/pubftp/pub/tex/latex/llncs/latex2e/llncsdoc.pdf
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\documentclass[a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{float}
+
+\begin{document}
+
+% first the title is needed
+\title{Energy aware scheduling}
+
+\maketitle
+
+\section{Problem formulation}
+
+We consider a problem of applications scheduling in a center with limited power and resources.
+
+
+This data center runs two different applications : active applications (also called web applications) and batch applications.
+
+\subsection{Active applications}
+
+We consider multiple active applications $\{A_{i}\}, i \in 1..n$, which run continuously over a given amount of time intervals $1..24$.
+
+Each application $A_i$ has, at a given time interval $j$, an execution modes ; each application's mode produces a given power consumption and profit when applied over an interval, with
+\begin{description}
+ \item[$M_{i,j} \in 1..3$] mode of activity $i$ at time $j$.
+ \item[$E_{i,j} \in 0..1000$] power consumption of activity $i$ at time $j$.
+ \item[$P_{i,j} \in 0..1000$] profit for running activity $i$ at time $j$.
+\end{description}
+
+Those informations can be stored in tables, eg :
+
+\begin{table}[H]
+\begin{center}
+  \begin{tabular}{ | l | l | l | l |}
+     \hline
+      & Mode 1 & Mode 2 & Mode 3 \\ \hline
+    $A_1$ & 50 & 60 & 70 \\ \hline
+    $A_2$ & 40 & 45 & 55 \\
+    \hline
+    \end{tabular}
+\end{center}
+\caption{Energy consumption for two active applications}
+\end{table}
+
+\begin{table}[H]
+\begin{center}
+    \begin{tabular}{ | l | l | l | l |}
+    \hline
+      & Mode 1 & Mode 2 & Mode 3 \\ \hline
+    $A_1$ & 100 & 110 & 120 \\ \hline
+    $A_2$ & 90 & 100 & 110 \\
+    \hline
+    \end{tabular}
+\end{center}
+\caption{Profit for two active applications}
+\end{table}
+
+\begin{itemize}
+ \item element ($M_{i,j}$, $Row^{Energy}_{i}$, $E_{i,j}$) \% \quad $E_i$=$Row^{Energy}_{i} [M_i]$
+ \item element ($M_{i,j}$, $Row^{Profit}_{i}$, $P_{i,j}$) \% \quad $P_i$=$Row^{Profit}_{i} [M_i]$
+\end{itemize}
+
+\subsection{Batch applications}
+
+We consider multiple batch jobs $\{B_{i}\}, i \in1..m$, each with its own parameters :
+
+\begin{description}
+\item [$Duration_i$] is the number of intervals this job must be run before being finished,
+\item [$Deadline_i$] deadline is the interval at which the job must be finished,
+\item [$Q_i$] $\in 0..1000$ is the profit earnt only if the whole job is finished before or at deadline,
+\item [$Power_i$] is the power consumed by the job when it is run over an interval
+\end{description}
+The batch jobs do not have execution modes.
+
+\begin{table}[H]
+\begin{center}
+  \begin{tabular}{ | l | l | l | }
+     \hline
+      & On & Off \\ \hline
+    $B_1$ & 60 & 0 \\ \hline
+    $B_2$ & 80 & 0 \\
+    \hline
+    \end{tabular}
+\end{center}
+\caption{Energy consumption for Batch applications}
+\end{table}
+
+Each batch job $i$ can be decomposed in as many subjobs $i,j$ as its duration. We note $S_{i,j}$ the interval at which the $j^{th}$ subjob of jow $i$ is executed.
+Since each subjob must be executed over a different time interval,\\
+$0< S_{i,1}<S_{i,2}$...$<S_{i,Duration_i}$ .\\
+If the job meets its deadline, then also\\
+$S_{i,Duration_i}<=Deadline_i$
+
+Energy consumption of batch job $i$ during an interval is $E_{i,j}$, where $i\in$ [1,m] and $j\in$ [1....$Duration_i$]. 
+\begin{itemize}
+ \item element ($S_{i,Duration_i}$,[.........$Profit_i$, $Pen_i,....$], $Q_i$)
+\end{itemize}
+
+\subsection{Energy cap}
+
+We also introduce the maximum available energy at $j$ as $Capacity_j$, where $j\in$ [1,24]. Since, in cumulative constraint modeling, the limit of maximum capacity of available energy can not be changed, we introduce fake jobs in each slot to match with the $Capacity_j$. So the maximum capacity is defined as Limit, where Limit = $max (Capacity_{h})$, ${h}\in$ [1,24]. For scheduling purpose we slice the total time i.e., 24/48 hours to 24/48 slots meaning 1 hour as slot and schedule each slot in advance with known information. So, Total Profit is $P=\sum_{i=1}^{n} {P_{i,j}} + \sum_{i=1}^{m} {Q_i}$
+ 
+\begin{itemize}
+\item For each active job $A_{i}$ starts at $j$, has duration of 1 slot and height of power consumption is $E_{ij}$, where, $\forall$j $\in$ [1,24]
+\end{itemize}
+
+\begin{itemize}
+\item For each batch jobs $B_{i}$ the start time is $S_{ij}$, duration is 1 slot and and height of power consumption is $E_{i}$, where, $\forall$i $\in$ [1,m] and $\forall$j $\in$ [1,$duration_i$]
+\end{itemize}
+
+\begin{itemize}
+\item  For every slot ${j}\in$ [1,24] we have a fake job $F_{h}$ that starts at fixed $j$, duration of 1 slot and height of power consumption of $Limit$ - $Capacity_j$, where, $\forall$j $\in$ [1,24]
+\end{itemize}
+
+\subsection{Memory use}
+
+The data center contains $l$ servers $\{S_k\}, k\in 1..l$. Each server $S_k$ has a memory capacity $M_k$ which limits the number of applications this server can execute.
+
+Executing an application $A_i$ or a job $B_i$ on a server $S_k$ consumes a fixed amount of memory 
+on the server over the execution interval. Reciprocally, each application must be run on a server at any time and any job executed during an interval must be run on a server.
+
+We note
+\begin{description}
+\item[$HA_{i,j}$] the host of the application $A_i$ during interval $j$
+\item[$HB_{i,j}$] the host of the job $B_i$ during interval $j$
+\item[$Load_{k,j}$] the memory load of the server $k$ during interval time $j$
+\item[$mem(C)$] the memory use of the job or application C.
+\end{description}
+
+then we know that
+
+\begin{equation}
+Load_{k,j} = \sum_{A_i}(mem(A_i) if HA_{i,j}=k) + \sum_{B_i}(mem(B_i) if HB_{i,j=k}
+\end{equation}
+
+\section{Solution formulation}
+
+A solution to such a problem consists in :
+\begin{itemize}
+\item $\forall$ Active application $A_i$ and time interval $j$, the execution mode $M_{i,j}$ at which to run the appliction during the interval
+\item $\forall$ Batch job $B_i$, a series time interval $S_{i,1}..S_{i, Duration_i}$ at which to execute the job.
+\item $\forall$ time interval $j$, $\forall$ server $S_k $, the set of Applications and jobs hosted on the server during the time interval.
+\end{itemize}
+with respect to the previoulsy specified conditions.
+
+\section{Objective}
+Our objective function is to maximize $P$,\\
+$P=\sum_{i=1}^{n} {P_{i,j}} + \sum_{i=1}^{m} {Q_i}$
+\end{document}
