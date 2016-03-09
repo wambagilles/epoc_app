@@ -130,6 +130,18 @@ Energy consumption of batch job $i$ during an interval is $E_{i,j}$, where $i\in
  \item element ($S_{i,Duration_i}$,[.........$Profit_i$, $Pen_i,....$], $Q_i$)
 \end{itemize}
 
+\subsection{VM migration}
+In the context of a data center made of more than one server, VMs are often migrated from one server to another. This migration is not costless in terms of energy consumption, we need to take those extra cost in our model. We introduce a migration cost both for active and batch jobs.
+
+\begin{itemize}
+\item[•] Active job.
+Let $HA_{i,j}$ be the host of the application $A_i$ during interval $j$. We denote $P(HA_{i,j})$ the cost of moving the application $A_i$ from one host to $HA_{i,j}$. If $HA_{i,j-1}$ is defined i.e. application $A_i$ was running during interval $j-1$, and $HA_{i,j-1} = HA_{i,j}$ then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is undefined, then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is defined and $HA_{i,j-1} \neq HA_{i,j}$ then $P(HA_{i,j})$ is a function of $HA_{i,j-1}$ and $HA_{i,j}$.
+
+\item[•] Batch job.
+Let $HB_{i,j}$ be the host of the application $A_i$ during interval $j$. We denote $P(HB_{i,j})$ the cost of moving the application $B_i$ from one host to $HB_{i,j}$. If $HB_{i,j-1}$ is defined i.e. application $B_i$ was not yet completed during interval $j-1$, and $HB_{i,j-1} = HB_{i,j}$ then $P(HB_{i,j}) = 0$. If $HB_{i,j-1}$ is undefined, then $P(HB_{i,j}) = 0$. If $HB_{i,j-1}$ is defined and $HB_{i,j-1} \neq HB_{i,j}$ then $P(HB_{i,j})$ is a function of $HB_{i,j-1}$ and $HB_{i,j}$.
+
+\end{itemize}
+
 \subsection{Energy cap}
 
 We also introduce the maximum available energy at $j$ as $Capacity_j$, where $j\in$ [1,24]. Since, in cumulative constraint modeling, the limit of maximum capacity of available energy can not be changed, we introduce fake jobs in each slot to match with the $Capacity_j$. So the maximum capacity is defined as Limit, where Limit = $max (Capacity_{h})$, ${h}\in$ [1,24]. For scheduling purpose we slice the total time i.e., 24/48 hours to 24/48 slots meaning 1 hour as slot and schedule each slot in advance with known information. So, Total Profit is $P=\sum_{i=1}^{n} {P_{i,j}} + \sum_{i=1}^{m} {Q_i}$
@@ -156,8 +168,6 @@ on the server over the execution interval. Reciprocally, each application must b
 We note
 \begin{description}
 \item[$HA_{i,j}$] the host of the application $A_i$ during interval $j$
-\gilles{
-\item[$P(HA_{i,j})$] the cost of moving the application $A_i$ from one host to $HA_{i,j}$. If $HA_{i,j-1}$ is defined i.e. application $A_i$ was running during interval $j-1$, and $HA_{i,j-1} = HA_{i,j}$ then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is undefined, then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is defined and $HA_{i,j-1} \neq HA_{i,j}$ then $P(HA_{i,j})$ is a function of $HA_{i,j-1}$ and $HA_{i,j}$. }
 \item[$HB_{i,j}$] the host of the job $B_i$ during interval $j$
 \item[$Load_{k,j}$] the memory load of the server $k$ during interval time $j$
 \item[$mem(C)$] the memory use of the job or application C.
