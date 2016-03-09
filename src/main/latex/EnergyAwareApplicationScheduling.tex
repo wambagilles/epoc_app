@@ -21,6 +21,20 @@
 \usepackage{amssymb}
 \usepackage{amsmath}
 \usepackage{float}
+\usepackage{color}
+
+
+\newcommand\gilles[1]{\textcolor{red}{#1}}
+\def\restriction#1#2{\mathchoice
+              {\setbox1\hbox{${\displaystyle #1}_{\scriptstyle #2}$}
+              \restrictionaux{#1}{#2}}
+              {\setbox1\hbox{${\textstyle #1}_{\scriptstyle #2}$}
+              \restrictionaux{#1}{#2}}
+              {\setbox1\hbox{${\scriptstyle #1}_{\scriptscriptstyle #2}$}
+              \restrictionaux{#1}{#2}}
+              {\setbox1\hbox{${\scriptscriptstyle #1}_{\scriptscriptstyle #2}$}
+              \restrictionaux{#1}{#2}}}
+\def\restrictionaux#1#2{{#1\,\smash{\vrule height .8\ht1 depth .85\dp1}}_{\,#2}}
 
 \begin{document}
 
@@ -142,6 +156,8 @@ on the server over the execution interval. Reciprocally, each application must b
 We note
 \begin{description}
 \item[$HA_{i,j}$] the host of the application $A_i$ during interval $j$
+\gilles{
+\item[$P(HA_{i,j})$] the cost of moving the application $A_i$ from one host to $HA_{i,j}$. If $HA_{i,j-1}$ is defined i.e. application $A_i$ was running during interval $j-1$, and $HA_{i,j-1} = HA_{i,j}$ then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is undefined, then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is defined and $HA_{i,j-1} \neq HA_{i,j}$ then $P(HA_{i,j})$ is a function of $HA_{i,j-1}$ and $HA_{i,j}$. }
 \item[$HB_{i,j}$] the host of the job $B_i$ during interval $j$
 \item[$Load_{k,j}$] the memory load of the server $k$ during interval time $j$
 \item[$mem(C)$] the memory use of the job or application C.
@@ -164,6 +180,6 @@ A solution to such a problem consists in :
 with respect to the previoulsy specified conditions.
 
 \section{Objective}
-Our objective function is to maximize $P$,\\
-$P=\sum_{i=1}^{n} {P_{i,j}} + \sum_{i=1}^{m} {Q_i}$
+Our objective function is to maximize $P$, \gilles{over the 24 time slots}\\
+$P= \gilles{\sum_{j=1}^{24} \bigg(} \sum_{i=1}^{n} {P_{i,j}} + \sum_{i=1}^{m} {Q_i} \gilles{+ \sum_{i=1}^{n} {P(HA_{i,j})} + \sum_{i=1}^{m} {P(HB_{i,j})} \bigg)} $
 \end{document}
