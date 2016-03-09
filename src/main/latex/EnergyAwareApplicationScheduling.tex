@@ -22,6 +22,7 @@
 \usepackage{amsmath}
 \usepackage{float}
 \usepackage{color}
+\usepackage{enumitem} % better description env 
 
 
 \newcommand\gilles[1]{\textcolor{red}{#1}}
@@ -49,6 +50,7 @@ We consider a problem of applications scheduling in a center with limited power 
 
 
 This data center runs two different applications : active applications (also called web applications) and batch applications.
+
 
 \subsection{Active applications}
 
@@ -94,6 +96,7 @@ Those informations can be stored in tables, eg :
  \item element ($M_{i,j}$, $Row^{Profit}_{i}$, $P_{i,j}$) \% \quad $P_i$=$Row^{Profit}_{i} [M_i]$
 \end{itemize}
 
+
 \subsection{Batch applications}
 
 We consider multiple batch jobs $\{B_{i}\}, i \in1..m$, each with its own parameters :
@@ -130,17 +133,43 @@ Energy consumption of batch job $i$ during an interval is $E_{i,j}$, where $i\in
  \item element ($S_{i,Duration_i}$,[.........$Profit_i$, $Pen_i,....$], $Q_i$)
 \end{itemize}
 
-\subsection{VM migration}
-In the context of a data center made of more than one server, VMs are often migrated from one server to another. This migration is not costless in terms of energy consumption, we need to take those extra cost in our model. We introduce a migration cost both for active and batch jobs.
 
-\begin{itemize}
-\item[•] Active job.
-Let $HA_{i,j}$ be the host of the application $A_i$ during interval $j$. We denote $P(HA_{i,j})$ the cost of moving the application $A_i$ from one host to $HA_{i,j}$. If $HA_{i,j-1}$ is defined i.e. application $A_i$ was running during interval $j-1$, and $HA_{i,j-1} = HA_{i,j}$ then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is undefined, then $P(HA_{i,j}) = 0$. If $HA_{i,j-1}$ is defined and $HA_{i,j-1} \neq HA_{i,j}$ then $P(HA_{i,j})$ is a function of $HA_{i,j-1}$ and $HA_{i,j}$.
+\subsection{Application placement and migration}
 
-\item[•] Batch job.
-Let $HB_{i,j}$ be the host of the application $A_i$ during interval $j$. We denote $P(HB_{i,j})$ the cost of moving the application $B_i$ from one host to $HB_{i,j}$. If $HB_{i,j-1}$ is defined i.e. application $B_i$ was not yet completed during interval $j-1$, and $HB_{i,j-1} = HB_{i,j}$ then $P(HB_{i,j}) = 0$. If $HB_{i,j-1}$ is undefined, then $P(HB_{i,j}) = 0$. If $HB_{i,j-1}$ is defined and $HB_{i,j-1} \neq HB_{i,j}$ then $P(HB_{i,j})$ is a function of $HB_{i,j-1}$ and $HB_{i,j}$.
+In the context of a data center containing more than one server, the applications must be placed at any interval on a server.
+The appliation can be migrated from one server to another. We need to consider the extra energy cost in our model.
 
-\end{itemize}
+We introduce The placement variables and a migration cost for both active and batch jobs. This cost is added to an interval's energy use when this interval requires the migration of the job.
+
+
+\subsubsection{Active job migration}
+
+Active jobs are always running on an host. We name
+
+\begin{description}[labelwidth=4em,align=left,labelindent=2em]
+	\item[$HA_{i,j}$] the host of the application $A_i$ during interval $j$,
+	\item[$PHA_{i,j}$] the cost of moving the application $A_i$ on the interval $j$.
+ 		\begin{itemize}
+			\item If $HA_{i,j-1}$ is defined, i.e. application $A_i$ was running during interval $j-1$, and $HA_{i,j-1} = HA_{i,j}$ then $P(HA_{i,j}) = 0$.
+			\item If $HA_{i,j-1}$ is undefined, then $P(HA_{i,j}) = 0$.
+			\item If $HA_{i,j-1}$ is defined and $HA_{i,j-1} \neq HA_{i,j}$ then $P(HA_{i,j})$ is a function of $HA_{i,j-1}$ and $HA_{i,j}$.
+		\end{itemize}
+\end{description}
+
+\subsubsection{Batch job migration}
+
+Batch jobs can be stopped fo as long as required. However, even when stopped they are still present on the server, as their memory state is saved. We name
+
+\begin{description}[labelwidth=4em,align=left,labelindent=2em]
+	\item [$HB_{i,j}$] the host of the application $B_i$ during interval $j$,
+	\item [$PHB_{i,j}$] the cost of moving the application $B_i$ on the interval $j$.
+		\begin{itemize}
+			\item If $HB_{i,j-1}$ is defined i.e. application $B_i$ was not yet completed during interval $j-1$, and $HB_{i,j-1} = HB_{i,j}$ then $P(HB_{i,j}) = 0$.
+			\item If $HB_{i,j-1}$ is undefined, then $P(HB_{i,j}) = 0$.
+			\item If $HB_{i,j-1}$ is defined and $HB_{i,j-1} \neq HB_{i,j}$ then $P(HB_{i,j})$ is a function of $HB_{i,j-1}$ and $HB_{i,j}$.
+		\end{itemize}
+\end{description}
+
 
 \subsection{Energy cap}
 
@@ -157,6 +186,7 @@ We also introduce the maximum available energy at $j$ as $Capacity_j$, where $j\
 \begin{itemize}
 \item  For every slot ${j}\in$ [1,24] we have a fake job $F_{h}$ that starts at fixed $j$, duration of 1 slot and height of power consumption of $Limit$ - $Capacity_j$, where, $\forall$j $\in$ [1,24]
 \end{itemize}
+
 
 \subsection{Memory use}
 
@@ -179,6 +209,7 @@ then we know that
 Load_{k,j} = \sum_{A_i}(mem(A_i) if HA_{i,j}=k) + \sum_{B_i}(mem(B_i) if HB_{i,j=k}
 \end{equation}
 
+
 \section{Solution formulation}
 
 A solution to such a problem consists in :
@@ -189,9 +220,8 @@ A solution to such a problem consists in :
 \end{itemize}
 with respect to the previoulsy specified conditions.
 
+
 \section{Objective}
 Our objective function is to maximize $P$,\\
 $P= \sum_{j=1}^{24} \bigg( \sum_{i=1}^{n} {P_{i,j}}\bigg)  + \sum_{i=1}^{m} Q_i$
-
-%$\gilles{+ \sum_{i=1}^{n} {P(HA_{i,j})} + \sum_{i=1}^{m} {P(HB_{i,j})} } $
 \end{document}
