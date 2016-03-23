@@ -1,4 +1,5 @@
 VPATH=../../../resources/
+
 all:EnergyAwareApplicationScheduling.pdf
 
 EnergyAwareApplicationScheduling.pdf:EnergyAwareApplicationScheduling.tex
