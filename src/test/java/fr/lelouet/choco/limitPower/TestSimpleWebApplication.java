@@ -7,18 +7,18 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.Model;
+import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.Result;
 
 public class TestSimpleWebApplication {
 
 	AppScheduler s;
 	Result r;
-	Model m;
+	SchedulingModel m;
 
 	@BeforeMethod
 	public void cleanup() {
-		m = new Model();
+		m = new SchedulingModel();
 	}
 
 	@Test

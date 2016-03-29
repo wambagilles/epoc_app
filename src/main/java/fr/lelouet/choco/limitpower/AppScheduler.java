@@ -10,14 +10,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.chocosolver.solver.Model;
 import org.chocosolver.solver.ResolutionPolicy;
-import org.chocosolver.solver.Solver;
-import org.chocosolver.solver.constraints.ICF;
-import org.chocosolver.solver.constraints.LCF;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.Task;
-import org.chocosolver.solver.variables.VF;
 import org.chocosolver.util.ESat;
 
 import fr.lelouet.choco.limitpower.model.HPC;
@@ -43,27 +40,27 @@ import fr.lelouet.choco.limitpower.model.PowerMode;
  *
  */
 @SuppressWarnings("serial")
-public class AppScheduler extends Solver {
+public class AppScheduler extends Model {
 
 	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppScheduler.class);
 
-	protected Model model = new Model();
+	protected SchedulingModel model = new SchedulingModel();
 
-	public Model getModel() {
+	public SchedulingModel getModel() {
 		return model;
 	}
 
 	protected IntVar fixed(int i) {
-		return VF.fixed(i, this);
+		return intVar(i);
 	}
 
 	protected IntVar enumerated(String name, int min, int max) {
-		return VF.enumerated(name, min, max, this);
+		return intVar(name, min, max, false);
 	}
 
 	protected IntVar bounded(String name, int min, int max) {
-		return VF.bounded(name, min, max, this);
+		return intVar(name, min, max, true);
 	}
 
 	// all the tasks and power we want to schedule. add a task with addTask, not
@@ -111,9 +108,9 @@ public class AppScheduler extends Solver {
 			this.powers = powers;
 			mode = enumerated(name + "_mode", 0, powers.length - 1);
 			power = enumerated(name + "_power", minIntArray(powers), maxIntArray(powers));
-			post(ICF.element(power, powers, mode));
+			post(element(power, powers, mode));
 			profit = enumerated(name + "_cost", minIntArray(profits), maxIntArray(profits));
-			post(ICF.element(profit, profits, mode));
+			post(element(profit, profits, mode));
 		}
 
 		@Override
@@ -202,27 +199,25 @@ public class AppScheduler extends Solver {
 			hpcTasks.put(n, l);
 			HPCSubTask last = null;
 			for (int i = 0; i < h.duration; i++) {
-				IntVar start = makeTimeSlotVar(name + "_start");
-				IntVar end = makeTimeSlotVar(name + "_end");
-				BoolVar onSchedule = ICF.arithm(end, "<=", model.nbIntervals).reif();
+				IntVar start = makeTimeSlotVar(getName() + "_start");
+				IntVar end = makeTimeSlotVar(getName() + "_end");
+				BoolVar onSchedule = arithm(end, "<=", model.nbIntervals).reify();
 				IntVar power = enumerated(n + "_" + i + "_power", 0, h.power);
-				post(ICF.element(power, new int[] {
-				    0, h.power
+				post(element(power, new int[] {
+						0, h.power
 				}, onSchedule));
 				if (last != null) {
-					LCF.ifThen(onSchedule, ICF.arithm(last.getEnd(), "<=", start));
+					ifThen(onSchedule, arithm(last.getEnd(), "<=", start));
 				}
 				HPCSubTask t = new HPCSubTask(h, start, end, power, onSchedule);
 				l.add(t);
 				last = t;
 				addTask(t, power);
 			}
-			IntVar benefit = VF.enumerated(n + "_benefit", new int[] {
-			    0, h.profit
-			}, this);
+			IntVar benefit = enumerated(n + "_benefit", 0, h.profit);
 			allProfits.add(benefit);
-			post(ICF.element(benefit, new int[] {
-			    0, h.profit
+			post(element(benefit, new int[] {
+					0, h.profit
 			}, last.onSchedule));
 		}
 	}
@@ -253,10 +248,10 @@ public class AppScheduler extends Solver {
 	/** add the profits and the powers of the tasks */
 	public void makeCumulative() {
 		totalProfit = bounded("totalProfit", 0, model.getMaxProfit());
-		post(ICF.sum(allProfits.toArray(new IntVar[] {}), totalProfit));
+		post(sum(allProfits.toArray(new IntVar[] {}), "=", totalProfit));
 		Task[] tasks = allTasks.toArray(new Task[] {});
 		IntVar[] heights = allPowers.toArray(new IntVar[] {});
-		post(ICF.cumulative(tasks, heights, fixed(model.maxPower)));
+		post(cumulative(tasks, heights, fixed(model.maxPower)));
 	}
 
 	//
@@ -264,28 +259,28 @@ public class AppScheduler extends Solver {
 	//
 
 	public IntVar makeSubtaskSum(String name, Function<HPCSubTask, IntVar> getter, IntVar initial) {
-		IntVar ret = bounded(name, 0, VF.MAX_INT_BOUND);
+		IntVar ret = bounded(name, 0, IntVar.MAX_INT_BOUND);
 		// stream of the hpcsubtasks variables
 		Stream<IntVar> variables = hpcTasks.values().stream().flatMap(List::stream).map(getter);
 		List<IntVar> vars = Stream.concat(variables, Stream.of(initial)).collect(Collectors.toList());
-		post(ICF.sum(vars.toArray(new IntVar[] {}), ret));
+		post(sum(vars.toArray(new IntVar[] {}), "=", ret));
 		return ret;
 	}
 
 	public IntVar makeObjective() {
 		switch (model.objective) {
-			case PROFIT:
-				return totalProfit;
-			case PROFIT_POWER:
-				// obj = profit*maxpower*duration + sum(hpcsubtask.power)
-				return makeSubtaskSum("profit_power", HPCSubTask::getPower,
-				    VF.scale(totalProfit, model.maxPower * model.nbIntervals));
-			case PROFIT_ONSCHEDULE:
-				// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
-				return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,
-				    VF.scale(totalProfit, model.hpcs.values().stream().mapToInt(h -> h.duration).sum()));
-			default:
-				throw new UnsupportedOperationException("case not supported here : " + model.objective);
+		case PROFIT:
+			return totalProfit;
+		case PROFIT_POWER:
+			// obj = profit*maxpower*duration + sum(hpcsubtask.power)
+			return makeSubtaskSum("profit_power", HPCSubTask::getPower,
+					scale(totalProfit, model.maxPower * model.nbIntervals));
+		case PROFIT_ONSCHEDULE:
+			// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
+			return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,
+					scale(totalProfit, model.hpcs.values().stream().mapToInt(h -> h.duration).sum()));
+		default:
+			throw new UnsupportedOperationException("case not supported here : " + model.objective);
 		}
 	}
 
@@ -321,7 +316,7 @@ public class AppScheduler extends Solver {
 	// Solve the problem
 	//
 
-	public Result solve(Model m) {
+	public Result solve(SchedulingModel m) {
 		model = m;
 		allPowers.clear();
 		allProfits.clear();
@@ -332,7 +327,7 @@ public class AppScheduler extends Solver {
 		makeCumulative();
 		// plugMonitor((org.chocosolver.solver.search.loop.monitors.IMonitorContradiction)
 		// cex -> System.err.println(cex));
-		findOptimalSolution(ResolutionPolicy.MAXIMIZE, makeObjective());
+		getSolver().findOptimalSolution(ResolutionPolicy.MAXIMIZE, makeObjective());
 		return isFeasible() == ESat.TRUE ? extractResult() : null;
 	}
 
@@ -358,7 +353,7 @@ public class AppScheduler extends Solver {
 		return ret;
 	}
 
-	public static Result solv(Model m) {
+	public static Result solv(SchedulingModel m) {
 		return new AppScheduler().solve(m);
 	}
 

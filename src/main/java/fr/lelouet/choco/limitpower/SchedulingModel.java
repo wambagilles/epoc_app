@@ -15,10 +15,10 @@ import fr.lelouet.choco.limitpower.model.PowerMode;
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
  *
  */
-public class Model {
+public class SchedulingModel {
 
 	@SuppressWarnings("unused")
-	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Model.class);
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SchedulingModel.class);
 
 	/** the objective to solve this problem */
 	public static enum Objective {
@@ -50,7 +50,7 @@ public class Model {
 	 *          the profit of the mode
 	 * @return this
 	 */
-	public Model addWeb(String name, int power, int profit) {
+	public SchedulingModel addWeb(String name, int power, int profit) {
 		if (hpcs.containsKey(name)) {
 			throw new UnsupportedOperationException(
 					"name " + name + " is already used for the HPC apps, can't use it for web app");

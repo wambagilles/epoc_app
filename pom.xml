@@ -4,6 +4,15 @@
 	<groupId>fr.lelouet.choco</groupId>
 	<artifactId>limitPower</artifactId>
 	<version>0.0.2-SNAPSHOT</version>
+	<repositories>
+		<repository>
+			<id>sonatype</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots/</url>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+		</repository>
+	</repositories>
 	<dependencies>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -13,7 +22,7 @@
 		<dependency>
 			<groupId>org.choco-solver</groupId>
 			<artifactId>choco-solver</artifactId>
-			<version>3.3.1</version>
+			<version>4.0.0-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
