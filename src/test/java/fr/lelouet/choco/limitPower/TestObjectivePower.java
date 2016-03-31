@@ -30,6 +30,34 @@ public class TestObjectivePower {
 	}
 
 	/**
+	 * one app with 1 power and 1 benefit, 2 intervals ; problem with 1 power, but
+	 * only one intervals. The best solution is to schedule the app on the one
+	 * interval
+	 */
+	@Test
+	public void testOneAppOneInterval() {
+		m.maxPower = 1;
+		m.nbIntervals = 1;
+		m.addHPC("a", 0, 2, 1, 1, 10);
+		r = solv(m);
+		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 0 }), "result is " + r);
+	}
+
+	/**
+	 * one app with 1 power and 1 benefit, 2 intervals ; problem with 1 power, but
+	 * only one intervals. The best solution is to schedule the app on the one
+	 * interval
+	 */
+	@Test
+	public void testOneAppTwoInterval() {
+		m.maxPower = 1;
+		m.nbIntervals = 2;
+		m.addHPC("a", 0, 3, 1, 1, 10);
+		r = solv(m);
+		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 0, 1 }), "result is " + r);
+	}
+
+	/**
 	 * two apps with 2 and 3 power and benefit=power, 2 intervals ; problem with 3
 	 * power, 3 intervals. The best solution is to schedule the 3-power first then
 	 * the 2-power on one interval
@@ -41,8 +69,8 @@ public class TestObjectivePower {
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		m.addHPC("b", 0, 2, 3, 3, 10);
 		r = solv(m);
-		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 2 }), "result is " + r);
-		Assert.assertEquals(r.hpcStarts.get("b"), Arrays.asList(0, 1), "result is " + r);
+		Assert.assertEquals(r.hpcStarts.get("a").size(), 1, "result is " + r);
+		Assert.assertEquals(r.hpcStarts.get("b").size(), 2, "result is " + r);
 	}
 
 }
