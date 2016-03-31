@@ -21,9 +21,23 @@ public class TestSimpleHpcsApplication {
 	}
 
 	@Test
+	public void testSingleIntervalApp() {
+
+		HPC h = new HPC(0, 1, 1, 1, 0);
+		m.addHPC("a", h);
+
+		// the HPC task fits perfectly in the 2-duration, 2-power intervals
+		m.maxPower = 1;
+		m.nbIntervals = 1;
+		r = solv(m);
+		Assert.assertNotNull(r);
+		Assert.assertEquals(r.profit, 1, "" + r);
+	}
+
+	@Test(dependsOnMethods = "testSingleIntervalApp")
 	public void testSimpleApp() {
 
-		HPC h = new HPC(0, 2, 2, 1, 10);
+		HPC h = new HPC(0, 2, 2, 1, 1);
 		m.addHPC("a", h);
 
 		// the HPC task fits perfectly in the 2-duration, 2-power intervals
@@ -47,12 +61,12 @@ public class TestSimpleHpcsApplication {
 		Assert.assertEquals(r.profit, 0, "" + r);
 	}
 
-	@Test
+	@Test(dependsOnMethods = "testSimpleApp")
 	public void testTwoApps() {
 		HPC a = new HPC(0, 2, 2, 2, 10);
 		m.addHPC("a", a);
 		HPC b = new HPC(0, 2, 2, 1, 10);
-		m.addHPC("b", b);
+		m.addHPC("c", b);
 
 		// enough power * duration to fit both at the same time
 		m.maxPower = 4;

@@ -12,9 +12,13 @@ import java.util.stream.Stream;
 
 import org.chocosolver.solver.Model;
 import org.chocosolver.solver.ResolutionPolicy;
+import org.chocosolver.solver.Solution;
+import org.chocosolver.solver.constraints.Constraint;
+import org.chocosolver.solver.trace.IOutputFactory;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.Task;
+import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
 import fr.lelouet.choco.limitpower.model.HPC;
@@ -26,7 +30,7 @@ import fr.lelouet.choco.limitpower.model.PowerMode;
  * <ul>
  * <li>the time is divided into a finite number of slots ; interval 0 is from
  * slot 0 to slot 1, etc. we have {@link #nbIntervals} interval so the times go
- * from 0 to {@link #nbIntervals} included</li>
+ * from 0 to {@link #nbIntervals} included (this is last slot's end time)</li>
  * <li>web apps start on 0 and end on {@link #nbIntervals}; have several modes,
  * each consume an amount of power and give a profit</li>
  * <li>hpc app have a given amount of subtask to schedule sequentially on the
@@ -62,8 +66,7 @@ public class AppScheduler extends Model {
 		return intVar(name, min, max, true);
 	}
 
-	// all the tasks and power we want to schedule. add a task with addTask, not
-	// directly with this method.
+	// task at position i has power at position i in allpowers
 	protected List<Task> allTasks = new ArrayList<>();
 
 	protected List<IntVar> allPowers = new ArrayList<>();
@@ -182,8 +185,9 @@ public class AppScheduler extends Model {
 	protected HashMap<String, List<HPCSubTask>> hpcTasks = new HashMap<>();
 
 	/**
-	 * make a variable related to an existing interval this variable can take a
-	 * value from 0 to the number of inter
+	 * make a variable related to an existing interval.<br />
+	 * This variable can take a value from 0 to the number of intervals +1
+	 * {@link SchedulingModel#nbIntervals}
 	 */
 	protected IntVar makeTimeSlotVar(String name) {
 		return bounded(name, 0, model.nbIntervals + 1);
@@ -198,26 +202,29 @@ public class AppScheduler extends Model {
 			hpcTasks.put(n, l);
 			HPCSubTask last = null;
 			for (int i = 0; i < h.duration; i++) {
-				IntVar start = makeTimeSlotVar(n + "_" + i + "_start");
-				IntVar end = makeTimeSlotVar(n + "_" + i + "_end");
-
-				BoolVar onSchedule = boolVar(n + "_onsched");
+				String subTaskName = n + "_" + i;
+				IntVar start = makeTimeSlotVar(subTaskName + "_start");
+				IntVar end = makeTimeSlotVar(subTaskName + "_end");
+				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
 				arithm(end, "<=", model.nbIntervals).reifyWith(onSchedule);
-				IntVar power = enumerated(n + "_" + i + "_power", 0, h.power);
+				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
 				post(element(power, new int[] {
 						0, h.power
 				}, onSchedule));
 				if (last != null) {
-					ifThen(onSchedule, arithm(last.getEnd(), "<=", start));
+					Constraint orderedCstr = arithm(last.getEnd(), "<=", start);
+					BoolVar isOrdered = boolVar(subTaskName + "_ordered");
+					orderedCstr.reifyWith(isOrdered);
+					arithm(onSchedule, "<=", isOrdered).post();
 				}
 				HPCSubTask t = new HPCSubTask(h, start, end, power, onSchedule);
 				l.add(t);
 				last = t;
 				addTask(t, power);
 			}
-			IntVar benefit = enumerated(n + "_benefit", 0, h.profit);
-			allProfits.add(benefit);
-			post(element(benefit, new int[] {
+			IntVar profit = enumerated(n + "_profit", 0, h.profit);
+			allProfits.add(profit);
+			post(element(profit, new int[] {
 					0, h.profit
 			}, last.onSchedule));
 		}
@@ -289,14 +296,14 @@ public class AppScheduler extends Model {
 	// extract data to a result
 	//
 
-	public Result extractResult() {
+	public Result extractResult(Solution s) {
 		Result ret = new Result();
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			String name = e.getKey();
 			ArrayList<PowerMode> list = new ArrayList<>();
 			List<PowerMode> modes = model.getWPowerModes(name);
-			for (WebSubClass w : webModes.get(name)) {
-				list.add(modes.get(w.mode.getValue()));
+			for (WebSubClass w : e.getValue()) {
+				list.add(modes.get(s.getIntVal(w.mode)));
 			}
 			ret.webModes.put(e.getKey(), list);
 		}
@@ -304,12 +311,12 @@ public class AppScheduler extends Model {
 			List<Integer> l = new ArrayList<>();
 			ret.hpcStarts.put(e.getKey(), l);
 			for (HPCSubTask h : e.getValue()) {
-				if (h.onSchedule.getValue() == 1) {
-					l.add(h.getStart().getValue());
+				if (s.getIntVal(h.onSchedule) == 1) {
+					l.add(s.getIntVal(h.getStart()));
 				}
 			}
 		}
-		ret.profit = totalProfit.getValue();
+		ret.profit = s.getIntVal(totalProfit);
 		return ret;
 	}
 
@@ -326,10 +333,26 @@ public class AppScheduler extends Model {
 		makeHPCTasks();
 		makeReductionTasks();
 		makeCumulative();
-		getSolver().showDecisions();
+		getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
+
+			@Override
+			public String print() {
+				Variable[] vars = getSolver().getStrategy().getVariables();
+				StringBuilder s = new StringBuilder(32);
+				for (int i = 0; i < vars.length; i++) {
+					s.append(vars[i]).append(' ');
+				}
+				return s.toString();
+			}
+		});
+		getSolver().showContradiction();
+		getSolver().showSolutions();
 		setObjective(ResolutionPolicy.MAXIMIZE, makeObjective());
-		solve();
-		return getSolver().isFeasible() == ESat.TRUE ? extractResult() : null;
+		Solution s = new Solution(this);
+		while (solve()) {
+			s.record();
+		}
+		return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
 	}
 
 	public static int maxIntArray(int... vals) {

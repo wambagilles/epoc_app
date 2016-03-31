@@ -22,12 +22,14 @@ public class SchedulingModel {
 
 	/** the objective to solve this problem */
 	public static enum Objective {
-		// objective is to maximize profit of the applications
+		/** objective is to maximize profit of the applications */
 		PROFIT,
-		// objective is to maximize profit, THEN to maximize the power use
+		/** objective is to maximize profit, THEN to maximize the power use */
 		PROFIT_POWER,
-		// objecive is to maximize profit, THEN to maximize number of subtasks on
-		// schedule
+		/**
+		 * objecive is to maximize profit, THEN to maximize number of subtasks on
+		 * schedule
+		 */
 		PROFIT_ONSCHEDULE
 	}
 
@@ -97,7 +99,7 @@ public class SchedulingModel {
 
 	/**
 	 * reference to a web app inside the model
-	 * 
+	 *
 	 * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
 	 *
 	 */
@@ -158,12 +160,12 @@ public class SchedulingModel {
 	// tools
 	//
 	/**
-	 * 
+	 *
 	 * @return the sum of the maximum profit of all applications
 	 */
 	public int getMaxProfit() {
 		return hpcs.values().stream().mapToInt(h -> h.profit).sum()
- + nbIntervals
+				+ nbIntervals
 				* webs.values().stream().mapToInt(l -> l.stream().mapToInt(pm -> pm.profit).max().getAsInt()).sum();
 	}
 

@@ -14,7 +14,7 @@ import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 
 /**
  * test the solver with objective being profit+power use
- * 
+ *
  * @author Guillaume Le Louët
  *
  */
