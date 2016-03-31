@@ -8,9 +8,9 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import fr.lelouet.choco.limitpower.Result;
 import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
-import fr.lelouet.choco.limitpower.Result;
 
 /**
  * test the solver with objective being profit+power use
@@ -41,8 +41,8 @@ public class TestObjectivePower {
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		m.addHPC("b", 0, 2, 3, 3, 10);
 		r = solv(m);
-		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 2 }));
-		Assert.assertEquals(r.hpcStarts.get("b"), Arrays.asList(0, 1));
+		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 2 }), "result is " + r);
+		Assert.assertEquals(r.hpcStarts.get("b"), Arrays.asList(0, 1), "result is " + r);
 	}
 
 }
