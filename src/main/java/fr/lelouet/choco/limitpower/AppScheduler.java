@@ -198,9 +198,11 @@ public class AppScheduler extends Model {
 			hpcTasks.put(n, l);
 			HPCSubTask last = null;
 			for (int i = 0; i < h.duration; i++) {
-				IntVar start = makeTimeSlotVar(getName() + "_start");
-				IntVar end = makeTimeSlotVar(getName() + "_end");
-				BoolVar onSchedule = arithm(end, "<=", model.nbIntervals).reify();
+				IntVar start = makeTimeSlotVar(n + "_" + i + "_start");
+				IntVar end = makeTimeSlotVar(n + "_" + i + "_end");
+
+				BoolVar onSchedule = boolVar(n + "_onsched");
+				arithm(end, "<=", model.nbIntervals).reifyWith(onSchedule);
 				IntVar power = enumerated(n + "_" + i + "_power", 0, h.power);
 				post(element(power, new int[] {
 						0, h.power
