@@ -39,7 +39,6 @@ import fr.lelouet.choco.limitpower.model.PowerMode;
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
  *
  */
-@SuppressWarnings("serial")
 public class AppScheduler extends Model {
 
 	@SuppressWarnings("unused")
@@ -274,11 +273,11 @@ public class AppScheduler extends Model {
 		case PROFIT_POWER:
 			// obj = profit*maxpower*duration + sum(hpcsubtask.power)
 			return makeSubtaskSum("profit_power", HPCSubTask::getPower,
-					scale(totalProfit, model.maxPower * model.nbIntervals));
+					intScaleView(totalProfit, model.maxPower * model.nbIntervals));
 		case PROFIT_ONSCHEDULE:
 			// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
 			return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,
-					scale(totalProfit, model.hpcs.values().stream().mapToInt(h -> h.duration).sum()));
+					intScaleView(totalProfit, model.hpcs.values().stream().mapToInt(h -> h.duration).sum()));
 		default:
 			throw new UnsupportedOperationException("case not supported here : " + model.objective);
 		}
@@ -325,10 +324,10 @@ public class AppScheduler extends Model {
 		makeHPCTasks();
 		makeReductionTasks();
 		makeCumulative();
-		// plugMonitor((org.chocosolver.solver.search.loop.monitors.IMonitorContradiction)
-		// cex -> System.err.println(cex));
-		getSolver().findOptimalSolution(ResolutionPolicy.MAXIMIZE, makeObjective());
-		return isFeasible() == ESat.TRUE ? extractResult() : null;
+		getSolver().showDecisions();
+		setObjective(ResolutionPolicy.MAXIMIZE, makeObjective());
+		solve();
+		return getSolver().isFeasible() == ESat.TRUE ? extractResult() : null;
 	}
 
 	public static int maxIntArray(int... vals) {

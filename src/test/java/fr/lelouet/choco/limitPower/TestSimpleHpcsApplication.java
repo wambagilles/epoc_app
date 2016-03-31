@@ -6,8 +6,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.Result;
+import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.model.HPC;
 
 public class TestSimpleHpcsApplication {
@@ -22,6 +22,7 @@ public class TestSimpleHpcsApplication {
 
 	@Test
 	public void testSimpleApp() {
+
 		HPC h = new HPC(0, 2, 2, 1, 10);
 		m.addHPC("a", h);
 
