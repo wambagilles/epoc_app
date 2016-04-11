@@ -14,6 +14,8 @@ public class Result {
 
 	public HashMap<String, List<Integer>> hpcStarts = new HashMap<>();
 
+	public HashMap<String, String[]> appHosters = new HashMap<>();
+
 	public int profit;
 
 	@Override

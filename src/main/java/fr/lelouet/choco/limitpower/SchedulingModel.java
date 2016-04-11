@@ -175,4 +175,29 @@ public class SchedulingModel {
 				+ powerlimits;
 	}
 
+	/** a server has a name, and a power(=cpu) capacity. */
+	public class Server {
+
+		public final String name;
+		int maxPower = Integer.MAX_VALUE;
+
+		public Server(String name) {
+			this.name = name;
+		}
+	};
+
+	protected HashMap<String, Server> serverByName = new HashMap<>();
+
+	/**
+	 * add a server with a given name, or return the one alredy prsent if exists.
+	 */
+	public Server addServer(String name) {
+		Server ret = serverByName.get(name);
+		if (ret == null) {
+			ret = new Server(name);
+			serverByName.put(name, ret);
+		}
+		return ret;
+	}
+
 }
