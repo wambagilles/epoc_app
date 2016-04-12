@@ -4,8 +4,11 @@ package fr.lelouet.choco.limitpower;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
@@ -186,18 +189,31 @@ public class SchedulingModel {
 		}
 	};
 
-	protected HashMap<String, Server> serverByName = new HashMap<>();
+	protected LinkedHashMap<String, Server> serversByName = new LinkedHashMap<>();
 
 	/**
-	 * add a server with a given name, or return the one alredy prsent if exists.
+	 * add a server with a given name, or return the one already present if
+	 * exists.
 	 */
 	public Server addServer(String name) {
-		Server ret = serverByName.get(name);
+		Server ret = serversByName.get(name);
 		if (ret == null) {
 			ret = new Server(name);
-			serverByName.put(name, ret);
+			serversByName.put(name, ret);
 		}
 		return ret;
+	}
+
+	public Server getServer(String name) {
+		return serversByName.get(name);
+	}
+
+	public int nbServers() {
+		return serversByName.size();
+	}
+
+	public Stream<Entry<String, Server>> servers() {
+		return serversByName.entrySet().stream();
 	}
 
 }

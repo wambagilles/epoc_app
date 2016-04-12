@@ -8,12 +8,12 @@ import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
-import fr.lelouet.choco.limitpower.Result;
+import fr.lelouet.choco.limitpower.SchedulingResult;
 
 public class TestSimpleWebApplication {
 
 	AppScheduler s;
-	Result r;
+	SchedulingResult r;
 	SchedulingModel m;
 
 	@BeforeMethod

@@ -125,21 +125,31 @@ public class AppScheduler extends Model {
 	 * for each web application, its modes
 	 */
 	Map<String, List<WebSubClass>> webModes = new HashMap<>();
+	Map<String, IntVar[]> webLocations = new HashMap<>();
+	Map<String, IntVar[]> webMigCosts = new HashMap<>();
 
 	/** make one task corresponding to the web apps */
 	protected void makeWebTasks() {
+		int nbservers = model.nbServers();
 		for (Entry<String, List<PowerMode>> e : model.webs.entrySet()) {
 			String name = e.getKey();
 			int[] appprofits = model.webProfits(name);
 			int[] apppower = model.webPowers(name);
 			List<WebSubClass> l = new ArrayList<>();
 			webModes.put(name, l);
-
+			IntVar[] positions = new IntVar[model.nbIntervals];
+			webLocations.put(name, positions);
+			IntVar[] migCosts = new IntVar[model.nbIntervals];
+			webMigCosts.put(name, migCosts);
 			for(int i=0;i<model.nbIntervals;i++) {
 				WebSubClass t = new WebSubClass(name+"_"+i, i, appprofits, apppower);
 				l.add(t);
 				addTask(t, t.power);
 				allProfits.add(t.profit);
+				IntVar position = intVar(0, nbservers - 1);
+				positions[i] = position;
+				IntVar webMigCost = intVar(new int[] { 0, 1 });
+				migCosts[i] = webMigCost;
 			}
 		}
 	}
@@ -296,8 +306,8 @@ public class AppScheduler extends Model {
 	// extract data to a result
 	//
 
-	public Result extractResult(Solution s) {
-		Result ret = new Result();
+	public SchedulingResult extractResult(Solution s) {
+		SchedulingResult ret = new SchedulingResult();
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			String name = e.getKey();
 			ArrayList<PowerMode> list = new ArrayList<>();
@@ -324,7 +334,7 @@ public class AppScheduler extends Model {
 	// Solve the problem
 	//
 
-	public Result solve(SchedulingModel m) {
+	public SchedulingResult solve(SchedulingModel m) {
 		model = m;
 		allPowers.clear();
 		allProfits.clear();
@@ -377,7 +387,7 @@ public class AppScheduler extends Model {
 		return ret;
 	}
 
-	public static Result solv(SchedulingModel m) {
+	public static SchedulingResult solv(SchedulingModel m) {
 		return new AppScheduler().solve(m);
 	}
 

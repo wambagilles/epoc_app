@@ -8,7 +8,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import fr.lelouet.choco.limitpower.Result;
+import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 
@@ -20,7 +20,7 @@ import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
  */
 public class TestObjectivePower {
 
-	Result r;
+	SchedulingResult r;
 	SchedulingModel m;
 
 	@BeforeMethod

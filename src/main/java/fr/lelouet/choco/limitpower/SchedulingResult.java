@@ -5,15 +5,16 @@ import java.util.List;
 
 import fr.lelouet.choco.limitpower.model.PowerMode;
 
-public class Result {
+public class SchedulingResult {
 
-	public Result() {
+	public SchedulingResult() {
 	}
 
 	public HashMap<String, List<PowerMode>> webModes = new HashMap<>();
 
 	public HashMap<String, List<Integer>> hpcStarts = new HashMap<>();
 
+	/** for each application name, at each intervale slot the application node */
 	public HashMap<String, String[]> appHosters = new HashMap<>();
 
 	public int profit;

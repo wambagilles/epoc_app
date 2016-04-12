@@ -9,7 +9,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.SchedulingModel;
-import fr.lelouet.choco.limitpower.Result;
+import fr.lelouet.choco.limitpower.SchedulingResult;
 
 /**
  * test the limit of power on some intervals
@@ -19,7 +19,7 @@ import fr.lelouet.choco.limitpower.Result;
  */
 public class TestLimit {
 
-	Result r;
+	SchedulingResult r;
 	SchedulingModel m;
 
 	@BeforeMethod
