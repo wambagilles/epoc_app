@@ -17,13 +17,16 @@ import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.trace.IOutputFactory;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
+import org.chocosolver.solver.variables.SetVar;
 import org.chocosolver.solver.variables.Task;
 import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
+import fr.lelouet.choco.limitpower.SchedulingModel.Server;
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
-
+import gnu.trove.map.TObjectIntMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**
  * solve an app scheduling problem with benefit maximisation.
@@ -66,7 +69,12 @@ public class AppScheduler extends Model {
 		return intVar(name, min, max, true);
 	}
 
-	// task at position i has power at position i in allpowers
+	/**
+	 * all tasks : web, hpc, and specific power-limit-oriented tasks<br />
+	 * 
+	 * 
+	 * task at position i has power at position i in {@link #allPowers}
+	 */
 	protected List<Task> allTasks = new ArrayList<>();
 
 	protected List<IntVar> allPowers = new ArrayList<>();
@@ -103,7 +111,7 @@ public class AppScheduler extends Model {
 		IntVar mode, power, profit;
 
 		WebSubClass(String name, int start, int[] profits, int[] powers) {
-			super(fixed(start), fixed(1), fixed(start+1));
+			super(fixed(start), fixed(1), fixed(start + 1));
 			assert profits.length == powers.length;
 			this.name = name;
 			this.profits = profits;
@@ -124,32 +132,21 @@ public class AppScheduler extends Model {
 	/**
 	 * for each web application, its modes
 	 */
-	Map<String, List<WebSubClass>> webModes = new HashMap<>();
-	Map<String, IntVar[]> webLocations = new HashMap<>();
-	Map<String, IntVar[]> webMigCosts = new HashMap<>();
+	protected Map<String, List<WebSubClass>> webModes = new HashMap<>();
 
 	/** make one task corresponding to the web apps */
 	protected void makeWebTasks() {
-		int nbservers = model.nbServers();
 		for (Entry<String, List<PowerMode>> e : model.webs.entrySet()) {
 			String name = e.getKey();
 			int[] appprofits = model.webProfits(name);
 			int[] apppower = model.webPowers(name);
 			List<WebSubClass> l = new ArrayList<>();
 			webModes.put(name, l);
-			IntVar[] positions = new IntVar[model.nbIntervals];
-			webLocations.put(name, positions);
-			IntVar[] migCosts = new IntVar[model.nbIntervals];
-			webMigCosts.put(name, migCosts);
-			for(int i=0;i<model.nbIntervals;i++) {
-				WebSubClass t = new WebSubClass(name+"_"+i, i, appprofits, apppower);
+			for (int i = 0; i < model.nbIntervals; i++) {
+				WebSubClass t = new WebSubClass(name + "_" + i, i, appprofits, apppower);
 				l.add(t);
 				addTask(t, t.power);
 				allProfits.add(t.profit);
-				IntVar position = intVar(0, nbservers - 1);
-				positions[i] = position;
-				IntVar webMigCost = intVar(new int[] { 0, 1 });
-				migCosts[i] = webMigCost;
 			}
 		}
 	}
@@ -195,7 +192,7 @@ public class AppScheduler extends Model {
 	protected HashMap<String, List<HPCSubTask>> hpcTasks = new HashMap<>();
 
 	/**
-	 * make a variable related to an existing interval.<br />
+	 * create a variable related to an existing interval.<br />
 	 * This variable can take a value from 0 to the number of intervals +1
 	 * {@link SchedulingModel#nbIntervals}
 	 */
@@ -203,14 +200,21 @@ public class AppScheduler extends Model {
 		return bounded(name, 0, model.nbIntervals + 1);
 	}
 
+	/** for each hpc task, the set of intervals it runs at */
+	protected HashMap<String, SetVar> hpcIntervals = new HashMap<>();
+
 	protected void makeHPCTasks() {
 		hpcTasks.clear();
+		int[] allIntervals = new int[model.nbIntervals + 1];
+		for (int i = 0; i < allIntervals.length; i++)
+			allIntervals[i] = i;
 		for (Entry<String, HPC> e : model.hpcs.entrySet()) {
 			HPC h = e.getValue();
 			String n = e.getKey();
 			ArrayList<HPCSubTask> l = new ArrayList<>();
 			hpcTasks.put(n, l);
 			HPCSubTask last = null;
+			IntVar[] hpcstarts = new IntVar[h.duration];
 			for (int i = 0; i < h.duration; i++) {
 				String subTaskName = n + "_" + i;
 				IntVar start = makeTimeSlotVar(subTaskName + "_start");
@@ -218,9 +222,7 @@ public class AppScheduler extends Model {
 				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
 				arithm(end, "<=", model.nbIntervals).reifyWith(onSchedule);
 				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
-				post(element(power, new int[] {
-						0, h.power
-				}, onSchedule));
+				post(element(power, new int[] { 0, h.power }, onSchedule));
 				if (last != null) {
 					Constraint orderedCstr = arithm(last.getEnd(), "<=", start);
 					BoolVar isOrdered = boolVar(subTaskName + "_ordered");
@@ -231,12 +233,15 @@ public class AppScheduler extends Model {
 				l.add(t);
 				last = t;
 				addTask(t, power);
+				hpcstarts[i] = start;
 			}
 			IntVar profit = enumerated(n + "_profit", 0, h.profit);
 			allProfits.add(profit);
-			post(element(profit, new int[] {
-					0, h.profit
-			}, last.onSchedule));
+			post(element(profit, new int[] { 0, h.profit }, last.onSchedule));
+
+			SetVar usedItvs = setVar(e.getKey() + "_itv", new int[] {}, allIntervals);
+			union(hpcstarts, usedItvs).post();
+			hpcIntervals.put(e.getKey(), usedItvs);
 		}
 	}
 
@@ -249,12 +254,112 @@ public class AppScheduler extends Model {
 	}
 
 	/**
-	 * add the task to reduce the total power available on given positions
+	 * add fake tasks that reduce the total power available on each interval
 	 */
-	public void makeReductionTasks() {
+	protected void makeReductionTasks() {
 		for (Entry<Integer, Integer> e : model.getLimits()) {
 			if (e.getValue() > 0) {
 				addTask(reductionTask(e.getKey()), fixed(Math.min(e.getValue(), model.maxPower)));
+			}
+		}
+	}
+
+	protected TObjectIntMap<String> appName2Index = new TObjectIntHashMap<String>(10, 0.5f, -1);
+	protected String[] index2AppName = null;
+
+	protected void affectAppIndex() {
+		List<String> appnames = Stream.concat(model.webs.keySet().stream(), model.hpcs.keySet().stream())
+				.collect(Collectors.toList());
+		index2AppName = appnames.toArray(new String[] {});
+		for (int i = 0; i < index2AppName.length; i++)
+			appName2Index.put(index2AppName[i], i);
+	}
+
+	/**
+	 * positions[i][j] is the position at interval i of the application j . if it
+	 * is -1 (for an hpc app) then the application is not run at interval i.
+	 */
+	protected IntVar[][] positions;
+
+	/**
+	 * make the variables related to the position of the applications. The
+	 * variables are not constrained yet.<br />
+	 * If web apps don't need any specific constraint, the hpc apps must have NO
+	 * host (value -1) when no subtask is executed on given interval.
+	 */
+	protected void makePositions() {
+		positions = new IntVar[model.nbIntervals][index2AppName.length];
+		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
+			String appName = index2AppName[appIdx];
+			boolean isWeb = model.webs.containsKey(appName);
+			for (int itv = 0; itv < positions.length; itv++) {
+				positions[itv][appIdx] = intVar("appPos_" + itv + "_" + appIdx, isWeb ? 0 : -1, model.nbServers() - 1);
+			}
+			if (!isWeb) {
+				SetVar intervals = hpcIntervals.get(appName);
+
+				for (int itv = 0; itv < positions.length; itv++) {
+					// position[i][hpc]>=0 <=> intervals(hpc).contains(id)
+					arithm(positions[itv][appIdx], ">=", 0).reifyWith(member(intVar(itv), intervals).reify());
+				}
+			}
+		}
+	}
+
+	/**
+	 * powers[i][j] is the power used at interval i by application j
+	 */
+	protected IntVar[][] appPowers;
+
+	/**
+	 * servPowers[i][j] is at interval i power of server j
+	 */
+	protected IntVar[][] servPowers;
+
+	/**
+	 * stores the power of actual web applications, hpc tasks in an array ; also
+	 * add the servers-related powers.<br />
+	 * to be called after {@link #makeHPCTasks()} and {@link #makeWebTasks()}.
+	 * <br />
+	 * the web powers are retrieved from the corresponding {@link WebSubClass} ;
+	 * <br />
+	 * the hpc powers are created, and constrained to 0 if no {@link HPCSubTask}
+	 * is scheduled on the interval or the hpc power if one is scheduled.
+	 */
+	protected void makePowers() {
+		appPowers = new IntVar[model.nbIntervals][];
+		for (int i = 0; i < appPowers.length; i++)
+			appPowers[i] = new IntVar[index2AppName.length];
+		// powers of each web tasks
+		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
+			int widx = appName2Index.get(e.getKey());
+			IntVar[] wpowers = e.getValue().stream().map(websubtask -> websubtask.power).collect(Collectors.toList())
+					.toArray(new IntVar[] {});
+			for (int itv = 0; itv < appPowers.length; itv++) {
+				appPowers[itv][widx] = wpowers[itv];
+			}
+		}
+		for (Entry<String, List<HPCSubTask>> e : hpcTasks.entrySet()) {
+			int hidx = appName2Index.get(e.getKey());
+			int power = model.getHPC(e.getKey()).power;
+			SetVar usedItvs = hpcIntervals.get(e.getKey());
+			for (int itv = 0; itv < appPowers.length; itv++) {
+				BoolVar executed = member(intVar(itv), usedItvs).reify();
+				appPowers[itv][hidx] = intScaleView(executed, power);
+			}
+		}
+		// now make all the [interval][server] power variables.
+		servPowers = new IntVar[model.nbIntervals][model.serversByName.size()];
+		Server[] servers = model.serversByName.entrySet().toArray(new Server[] {});
+		for (int itv = 0; itv < model.nbIntervals; itv++) {
+			for (int servIdx = 0; servIdx < servers.length; servIdx++) {
+				IntVar[] powerOnServers = new IntVar[index2AppName.length];
+				int maxpower = model.serversByName.get(index2AppName[servIdx]).maxPower;
+				for (int appIdx = 0; appIdx < powerOnServers.length; appIdx++) {
+					IntVar power = intVar("app_" + appIdx + "_powerat_" + itv + "_on_" + servIdx, 0, maxpower);
+					powerOnServers[appIdx] = power;
+					post(times(arithm(positions[itv][appIdx], "=", servIdx).reify(), appPowers[itv][appIdx], power));
+				}
 			}
 		}
 	}
@@ -264,7 +369,7 @@ public class AppScheduler extends Model {
 	//
 
 	/** add the profits and the powers of the tasks */
-	public void makeCumulative() {
+	protected void makeCumulative() {
 		totalProfit = bounded("totalProfit", 0, model.getMaxProfit());
 		post(sum(allProfits.toArray(new IntVar[] {}), "=", totalProfit));
 		Task[] tasks = allTasks.toArray(new Task[] {});
@@ -276,7 +381,7 @@ public class AppScheduler extends Model {
 	// define objective
 	//
 
-	public IntVar makeSubtaskSum(String name, Function<HPCSubTask, IntVar> getter, IntVar initial) {
+	protected IntVar makeSubtaskSum(String name, Function<HPCSubTask, IntVar> getter, IntVar initial) {
 		IntVar ret = bounded(name, 0, IntVar.MAX_INT_BOUND);
 		// stream of the hpcsubtasks variables
 		Stream<IntVar> variables = hpcTasks.values().stream().flatMap(List::stream).map(getter);
@@ -285,7 +390,7 @@ public class AppScheduler extends Model {
 		return ret;
 	}
 
-	public IntVar makeObjective() {
+	protected IntVar makeObjective() {
 		switch (model.objective) {
 		case PROFIT:
 			return totalProfit;
@@ -306,12 +411,12 @@ public class AppScheduler extends Model {
 	// extract data to a result
 	//
 
-	public SchedulingResult extractResult(Solution s) {
+	protected SchedulingResult extractResult(Solution s) {
 		SchedulingResult ret = new SchedulingResult();
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			String name = e.getKey();
 			ArrayList<PowerMode> list = new ArrayList<>();
-			List<PowerMode> modes = model.getWPowerModes(name);
+			List<PowerMode> modes = model.getWebPowerModes(name);
 			for (WebSubClass w : e.getValue()) {
 				list.add(modes.get(s.getIntVal(w.mode)));
 			}
@@ -330,17 +435,28 @@ public class AppScheduler extends Model {
 		return ret;
 	}
 
+	protected void clearCache() {
+		allPowers.clear();
+		allProfits.clear();
+		allTasks.clear();
+		appName2Index.clear();
+		index2AppName = null;
+		positions = null;
+		appPowers = null;
+	}
+
 	//
 	// Solve the problem
 	//
 
 	public SchedulingResult solve(SchedulingModel m) {
+		clearCache();
 		model = m;
-		allPowers.clear();
-		allProfits.clear();
-		allTasks.clear();
+		makePositions();
+		affectAppIndex();
 		makeWebTasks();
 		makeHPCTasks();
+		makePowers();
 		makeReductionTasks();
 		makeCumulative();
 		getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {

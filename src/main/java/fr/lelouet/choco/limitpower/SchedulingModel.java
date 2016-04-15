@@ -42,7 +42,7 @@ public class SchedulingModel {
 
 	public int maxPower = 100;
 
-	protected HashMap<String, List<PowerMode>> webs = new HashMap<>();
+	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
 
 	/**
 	 * add a power mode to an app name, if it does not have it already
@@ -96,7 +96,7 @@ public class SchedulingModel {
 		return ret;
 	}
 
-	public List<PowerMode> getWPowerModes(String name) {
+	public List<PowerMode> getWebPowerModes(String name) {
 		return Collections.unmodifiableList(webs.get(name));
 	}
 
@@ -127,7 +127,7 @@ public class SchedulingModel {
 		return new NamedWeb(name);
 	}
 
-	protected HashMap<String, HPC> hpcs = new HashMap<>();
+	protected LinkedHashMap<String, HPC> hpcs = new LinkedHashMap<>();
 
 	public HPC getHPC(String name) {
 		return hpcs.get(name);
