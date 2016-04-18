@@ -71,8 +71,8 @@ public class AppScheduler extends Model {
 
 	/**
 	 * all tasks : web, hpc, and specific power-limit-oriented tasks<br />
-	 * 
-	 * 
+	 *
+	 *
 	 * task at position i has power at position i in {@link #allPowers}
 	 */
 	protected List<Task> allTasks = new ArrayList<>();
@@ -206,8 +206,9 @@ public class AppScheduler extends Model {
 	protected void makeHPCTasks() {
 		hpcTasks.clear();
 		int[] allIntervals = new int[model.nbIntervals + 1];
-		for (int i = 0; i < allIntervals.length; i++)
+		for (int i = 0; i < allIntervals.length; i++) {
 			allIntervals[i] = i;
+		}
 		for (Entry<String, HPC> e : model.hpcs.entrySet()) {
 			HPC h = e.getValue();
 			String n = e.getKey();
@@ -264,6 +265,10 @@ public class AppScheduler extends Model {
 		}
 	}
 
+	/////
+	// name<->idx for apps
+	////
+
 	protected TObjectIntMap<String> appName2Index = new TObjectIntHashMap<String>(10, 0.5f, -1);
 	protected String[] index2AppName = null;
 
@@ -271,8 +276,9 @@ public class AppScheduler extends Model {
 		List<String> appnames = Stream.concat(model.webs.keySet().stream(), model.hpcs.keySet().stream())
 				.collect(Collectors.toList());
 		index2AppName = appnames.toArray(new String[] {});
-		for (int i = 0; i < index2AppName.length; i++)
+		for (int i = 0; i < index2AppName.length; i++) {
 			appName2Index.put(index2AppName[i], i);
+		}
 	}
 
 	/**
@@ -307,6 +313,45 @@ public class AppScheduler extends Model {
 	}
 
 	/**
+	 * ismigrateds[i][j] is true if app j is moved at interval i. first interval
+	 * always returns false. a web app is migrated if hoster changed, a hpc app is
+	 * migrated if hoster was not -1 and hoster changed.
+	 */
+	protected BoolVar[][] isMigrateds = null;
+
+	protected void makeIsMigrateds() {
+		isMigrateds = new BoolVar[model.nbIntervals][index2AppName.length];
+		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
+			isMigrateds[0][appIdx] = boolVar(false);
+			String appName = index2AppName[appIdx];
+			boolean isWeb = model.webs.containsKey(appName);
+			for (int itv = 1; itv < model.nbIntervals; itv++) {
+				if (isWeb) {
+					isMigrateds[itv][appIdx] = arithm(positions[itv][appIdx], "!=", positions[itv - 1][appIdx]).reify();
+				} else {
+					isMigrateds[itv][appIdx] = and(arithm(positions[itv - 1][appIdx], "!=", -1),
+							arithm(positions[itv][appIdx], "!=", positions[itv - 1][appIdx])).reify();
+				}
+			}
+		}
+	}
+
+	// migrationCosts[i] is thecost of vm migration at interval i
+	protected IntVar[] migrationCosts = null;
+
+	protected void makeMigrationCosts() {
+		migrationCosts = new IntVar[model.nbIntervals];
+		int[] coefs = new int[index2AppName.length];
+		for (int i = 0; i < coefs.length; i++) {
+			coefs[i] = 1;
+		}
+		for (int i = 0; i < migrationCosts.length; i++) {
+			migrationCosts[i] = intVar("migrationCost_" + i, 0, index2AppName.length * 1);
+			post(scalar(isMigrateds[i], coefs, "=", migrationCosts[i]));
+		}
+	}
+
+	/**
 	 * powers[i][j] is the power used at interval i by application j
 	 */
 	protected IntVar[][] appPowers;
@@ -328,8 +373,9 @@ public class AppScheduler extends Model {
 	 */
 	protected void makePowers() {
 		appPowers = new IntVar[model.nbIntervals][];
-		for (int i = 0; i < appPowers.length; i++)
+		for (int i = 0; i < appPowers.length; i++) {
 			appPowers[i] = new IntVar[index2AppName.length];
+		}
 		// powers of each web tasks
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			int widx = appName2Index.get(e.getKey());
@@ -440,9 +486,15 @@ public class AppScheduler extends Model {
 		allProfits.clear();
 		allTasks.clear();
 		appName2Index.clear();
-		index2AppName = null;
-		positions = null;
 		appPowers = null;
+		hpcIntervals.clear();
+		hpcTasks.clear();
+		index2AppName = null;
+		isMigrateds = null;
+		migrationCosts = null;
+		positions = null;
+		servPowers = null;
+		webModes.clear();
 	}
 
 	//
@@ -452,8 +504,10 @@ public class AppScheduler extends Model {
 	public SchedulingResult solve(SchedulingModel m) {
 		clearCache();
 		model = m;
-		makePositions();
 		affectAppIndex();
+		makePositions();
+		makeIsMigrateds();
+		makeMigrationCosts();
 		makeWebTasks();
 		makeHPCTasks();
 		makePowers();
