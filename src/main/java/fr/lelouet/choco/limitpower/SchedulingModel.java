@@ -195,7 +195,7 @@ public class SchedulingModel {
 	 * add a server with a given name, or return the one already present if
 	 * exists.
 	 */
-	public Server addServer(String name) {
+	public Server server(String name) {
 		Server ret = serversByName.get(name);
 		if (ret == null) {
 			ret = new Server(name);

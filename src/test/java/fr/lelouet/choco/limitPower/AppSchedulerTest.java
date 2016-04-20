@@ -18,7 +18,7 @@ public class AppSchedulerTest {
 	@Test
 	public void testBug() {
 		SchedulingModel m = new SchedulingModel();
-		m.addServer("server").maxPower = 1000;
+		m.server("server").maxPower = 1000;
 		m.objective = Objective.PROFIT_POWER;
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		SchedulingResult r = solv(m);
@@ -28,7 +28,7 @@ public class AppSchedulerTest {
 	@Test
 	public void testSolvingValue() {
 		SchedulingModel m = new SchedulingModel();
-		m.addServer("server").maxPower = 1000;
+		m.server("server").maxPower = 1000;
 		m.nameWeb("w1").add(50, 120);
 		m.nbIntervals = 2;
 		m.maxPower = 1000;
