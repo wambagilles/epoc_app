@@ -13,7 +13,7 @@ import fr.lelouet.choco.limitpower.SchedulingResult;
 
 /**
  * test the limit of power on some intervals
- * 
+ *
  * @author Guillaume Le Louët
  *
  */
@@ -25,6 +25,7 @@ public class TestLimit {
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
+		m.addServer("server").maxPower = 1000;
 	}
 
 	@Test

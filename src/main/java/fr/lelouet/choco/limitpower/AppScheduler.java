@@ -22,7 +22,6 @@ import org.chocosolver.solver.variables.Task;
 import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
-import fr.lelouet.choco.limitpower.SchedulingModel.Server;
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import gnu.trove.map.TObjectIntMap;
@@ -387,7 +386,7 @@ public class AppScheduler extends Model {
 	 * the hpc powers are created, and constrained to 0 if no {@link HPCSubTask}
 	 * is scheduled on the interval or the hpc power if one is scheduled.
 	 */
-	protected void makePowers() {
+	protected void makeAppPowers() {
 		appPowers = new IntVar[model.nbIntervals][];
 		for (int i = 0; i < appPowers.length; i++) {
 			appPowers[i] = new IntVar[index2AppName.length];
@@ -413,12 +412,11 @@ public class AppScheduler extends Model {
 			}
 		}
 		// now make all the [interval][server] power variables.
-		servPowers = new IntVar[model.nbIntervals][model.serversByName.size()];
-		Server[] servers = model.serversByName.entrySet().toArray(new Server[] {});
+		servPowers = new IntVar[model.nbIntervals][index2ServName.length];
 		for (int itv = 0; itv < model.nbIntervals; itv++) {
-			for (int servIdx = 0; servIdx < servers.length; servIdx++) {
+			for (int servIdx = 0; servIdx < index2ServName.length; servIdx++) {
 				IntVar[] powerOnServers = new IntVar[index2AppName.length];
-				int maxpower = model.serversByName.get(index2AppName[servIdx]).maxPower;
+				int maxpower = model.serversByName.get(index2ServName[servIdx]).maxPower;
 				for (int appIdx = 0; appIdx < powerOnServers.length; appIdx++) {
 					IntVar power = intVar("app_" + appIdx + "_powerat_" + itv + "_on_" + servIdx, 0, maxpower);
 					powerOnServers[appIdx] = power;
@@ -540,7 +538,7 @@ public class AppScheduler extends Model {
 		makePositions();
 		makeIsMigrateds();
 		makeMigrationCosts();
-		makePowers();
+		makeAppPowers();
 		makeReductionTasks();
 		makeCumulative();
 		getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {

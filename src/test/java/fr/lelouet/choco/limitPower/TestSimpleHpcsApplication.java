@@ -6,8 +6,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.SchedulingModel;
+import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.model.HPC;
 
 public class TestSimpleHpcsApplication {
@@ -18,6 +18,7 @@ public class TestSimpleHpcsApplication {
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
+		m.addServer("server").maxPower = 1000;
 	}
 
 	@Test
