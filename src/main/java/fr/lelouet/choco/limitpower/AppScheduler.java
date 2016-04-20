@@ -70,7 +70,8 @@ public class AppScheduler extends Model {
 	}
 
 	/**
-	 * all tasks : web, hpc, and specific power-limit-oriented tasks<br />
+	 * all tasks for cumulative : web, hpc, and specific power-limit-oriented
+	 * tasks<br />
 	 *
 	 *
 	 * task at position i has power at position i in {@link #allPowers}
@@ -246,25 +247,6 @@ public class AppScheduler extends Model {
 		}
 	}
 
-	//
-	// reduction tasks to reduce effective power at a given time
-	//
-
-	protected Task reductionTask(int index) {
-		return new Task(fixed(index), fixed(1), fixed(index + 1));
-	}
-
-	/**
-	 * add fake tasks that reduce the total power available on each interval
-	 */
-	protected void makeReductionTasks() {
-		for (Entry<Integer, Integer> e : model.getLimits()) {
-			if (e.getValue() > 0) {
-				addTask(reductionTask(e.getKey()), fixed(Math.min(e.getValue(), model.maxPower)));
-			}
-		}
-	}
-
 	/////
 	// name<->idx for apps
 	////
@@ -272,12 +254,27 @@ public class AppScheduler extends Model {
 	protected TObjectIntMap<String> appName2Index = new TObjectIntHashMap<String>(10, 0.5f, -1);
 	protected String[] index2AppName = null;
 
-	protected void affectAppIndex() {
+	////
+	// name<->idx for servers
+	////
+
+	protected TObjectIntMap<String> servName2Index = new TObjectIntHashMap<String>();
+	protected String[] index2ServName = null;
+
+	/**
+	 * fill data in {@link #servName2Index}, {@link #index2ServName},
+	 * {@link #appName2Index}, {@link #index2AppName}
+	 */
+	protected void affectIndexes() {
 		List<String> appnames = Stream.concat(model.webs.keySet().stream(), model.hpcs.keySet().stream())
 				.collect(Collectors.toList());
 		index2AppName = appnames.toArray(new String[] {});
 		for (int i = 0; i < index2AppName.length; i++) {
 			appName2Index.put(index2AppName[i], i);
+		}
+		index2ServName = model.serversByName.keySet().toArray(new String[] {});
+		for (int i = 0; i < index2ServName.length; i++) {
+			servName2Index.put(index2ServName[i], i);
 		}
 	}
 
@@ -303,7 +300,6 @@ public class AppScheduler extends Model {
 			}
 			if (!isWeb) {
 				SetVar intervals = hpcIntervals.get(appName);
-
 				for (int itv = 0; itv < positions.length; itv++) {
 					// position[i][hpc]>=0 <=> intervals(hpc).contains(id)
 					arithm(positions[itv][appIdx], ">=", 0).reifyWith(member(intVar(itv), intervals).reify());
@@ -351,6 +347,26 @@ public class AppScheduler extends Model {
 		}
 	}
 
+	//
+	// reduction tasks to reduce effective power at a given time
+	//
+
+	protected Task reductionTask(int index) {
+		return new Task(fixed(index), fixed(1), fixed(index + 1));
+	}
+
+	/**
+	 * add fake tasks that reduce the total power available on each interval
+	 */
+	protected void makeReductionTasks() {
+		for (Entry<Integer, Integer> e : model.getLimits()) {
+			if (e.getValue() > 0) {
+				addTask(reductionTask(e.getKey()),
+						intOffsetView(migrationCosts[e.getKey()], Math.min(e.getValue(), model.maxPower)));
+			}
+		}
+	}
+
 	/**
 	 * powers[i][j] is the power used at interval i by application j
 	 */
@@ -376,7 +392,8 @@ public class AppScheduler extends Model {
 		for (int i = 0; i < appPowers.length; i++) {
 			appPowers[i] = new IntVar[index2AppName.length];
 		}
-		// powers of each web tasks
+		// powers of each web tasks, retrieved from the power of the cumulative
+		// tasks
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			int widx = appName2Index.get(e.getKey());
 			IntVar[] wpowers = e.getValue().stream().map(websubtask -> websubtask.power).collect(Collectors.toList())
@@ -385,6 +402,7 @@ public class AppScheduler extends Model {
 				appPowers[itv][widx] = wpowers[itv];
 			}
 		}
+		// power of each hpc task, 0 if the task is not on schedule.
 		for (Entry<String, List<HPCSubTask>> e : hpcTasks.entrySet()) {
 			int hidx = appName2Index.get(e.getKey());
 			int power = model.getHPC(e.getKey()).power;
@@ -478,7 +496,17 @@ public class AppScheduler extends Model {
 			}
 		}
 		ret.profit = s.getIntVal(totalProfit);
+		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
+			String appName = index2AppName[appIdx];
+			String[] positions = new String[model.nbIntervals];
+			for (int itv = 0; itv < positions.length; itv++) {
+				int positionIdx = s.getIntVal(this.positions[itv][appIdx]);
+				positions[itv] = positionIdx == -1 ? null : index2ServName[positionIdx];
+			}
+			ret.appHosters.put(appName, positions);
+		}
 		return ret;
+
 	}
 
 	protected void clearCache() {
@@ -490,9 +518,11 @@ public class AppScheduler extends Model {
 		hpcIntervals.clear();
 		hpcTasks.clear();
 		index2AppName = null;
+		index2ServName = null;
 		isMigrateds = null;
 		migrationCosts = null;
 		positions = null;
+		servName2Index.clear();
 		servPowers = null;
 		webModes.clear();
 	}
@@ -504,12 +534,12 @@ public class AppScheduler extends Model {
 	public SchedulingResult solve(SchedulingModel m) {
 		clearCache();
 		model = m;
-		affectAppIndex();
+		affectIndexes();
+		makeWebTasks();
+		makeHPCTasks();
 		makePositions();
 		makeIsMigrateds();
 		makeMigrationCosts();
-		makeWebTasks();
-		makeHPCTasks();
 		makePowers();
 		makeReductionTasks();
 		makeCumulative();

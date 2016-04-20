@@ -19,6 +19,7 @@ public class TestSimpleWebApplication {
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
+		m.addServer("server").maxPower = 1000;
 	}
 
 	@Test

@@ -21,7 +21,7 @@ public class SchedulingResult {
 
 	@Override
 	public String toString() {
-		return "" + profit + webModes + hpcStarts;
+		return "" + profit + webModes + hpcStarts + appHosters;
 	}
 
 }

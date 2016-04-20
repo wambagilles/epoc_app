@@ -182,7 +182,7 @@ public class SchedulingModel {
 	public class Server {
 
 		public final String name;
-		int maxPower = Integer.MAX_VALUE;
+		public int maxPower = Integer.MAX_VALUE;
 
 		public Server(String name) {
 			this.name = name;
