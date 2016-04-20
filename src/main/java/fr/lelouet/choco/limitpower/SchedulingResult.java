@@ -15,7 +15,7 @@ public class SchedulingResult {
 	public HashMap<String, List<Integer>> hpcStarts = new HashMap<>();
 
 	/** for each application name, at each intervale slot the application node */
-	public HashMap<String, String[]> appHosters = new HashMap<>();
+	public HashMap<String, List<String>> appHosters = new HashMap<>();
 
 	public int profit;
 

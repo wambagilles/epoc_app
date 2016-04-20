@@ -35,7 +35,8 @@ public class HPC {
 	 * interval slot after which the application must not have any remaining part
 	 * scheduled in order to consider the benefit acquired.<br />
 	 * For example if start=0, duration=1, deadline=0, that means the only
-	 * interval this application can be scheduled is the first (interval 0)
+	 * interval this application can be scheduled is the first (interval 0)<br />
+	 * if not relevant, set it to <0 and it should not be used.
 	 */
 	public int deadline;
 

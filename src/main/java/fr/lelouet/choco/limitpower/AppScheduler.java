@@ -221,7 +221,8 @@ public class AppScheduler extends Model {
 				IntVar start = makeTimeSlotVar(subTaskName + "_start");
 				IntVar end = makeTimeSlotVar(subTaskName + "_end");
 				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
-				arithm(end, "<=", model.nbIntervals).reifyWith(onSchedule);
+				arithm(end, "<=", h.deadline > 0 ? Math.min(h.deadline, model.nbIntervals) : model.nbIntervals)
+				.reifyWith(onSchedule);
 				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
 				post(element(power, new int[] { 0, h.power }, onSchedule));
 				if (last != null) {
@@ -358,12 +359,9 @@ public class AppScheduler extends Model {
 	 * add fake tasks that reduce the total power available on each interval
 	 */
 	protected void makeReductionTasks() {
-		for (Entry<Integer, Integer> e : model.getLimits()) {
-			if (e.getValue() > 0) {
-				addTask(reductionTask(e.getKey()),
-						intOffsetView(migrationCosts[e.getKey()], Math.min(e.getValue(), model.maxPower)));
-			}
-		}
+		model.getLimits().forEach(e -> {
+			addTask(reductionTask(e.getKey()), intOffsetView(migrationCosts[e.getKey()], model.maxPower - e.getValue()));
+		});
 	}
 
 	/**
@@ -496,12 +494,12 @@ public class AppScheduler extends Model {
 		ret.profit = s.getIntVal(totalProfit);
 		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
 			String appName = index2AppName[appIdx];
-			String[] positions = new String[model.nbIntervals];
-			for (int itv = 0; itv < positions.length; itv++) {
+			List<String> positionsl = new ArrayList<>();
+			for (int itv = 0; itv < this.positions.length; itv++) {
 				int positionIdx = s.getIntVal(this.positions[itv][appIdx]);
-				positions[itv] = positionIdx == -1 ? null : index2ServName[positionIdx];
+				positionsl.add(positionIdx == -1 ? null : index2ServName[positionIdx]);
 			}
-			ret.appHosters.put(appName, positions);
+			ret.appHosters.put(appName, positionsl);
 		}
 		return ret;
 
