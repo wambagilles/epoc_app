@@ -211,18 +211,19 @@ public class AppScheduler extends Model {
 		}
 		for (Entry<String, HPC> e : model.hpcs.entrySet()) {
 			HPC h = e.getValue();
-			String n = e.getKey();
+			String name = e.getKey();
+			int idx = appName2Index.get(name);
 			ArrayList<HPCSubTask> l = new ArrayList<>();
-			hpcTasks.put(n, l);
+			hpcTasks.put(name, l);
 			HPCSubTask last = null;
 			IntVar[] hpcstarts = new IntVar[h.duration];
 			for (int i = 0; i < h.duration; i++) {
-				String subTaskName = n + "_" + i;
+				String subTaskName = name + "_" + i;
 				IntVar start = makeTimeSlotVar(subTaskName + "_start");
 				IntVar end = makeTimeSlotVar(subTaskName + "_end");
 				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
 				arithm(end, "<=", h.deadline > 0 ? Math.min(h.deadline, model.nbIntervals) : model.nbIntervals)
-				.reifyWith(onSchedule);
+						.reifyWith(onSchedule);
 				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
 				post(element(power, new int[] { 0, h.power }, onSchedule));
 				if (last != null) {
@@ -237,13 +238,17 @@ public class AppScheduler extends Model {
 				addTask(t, power);
 				hpcstarts[i] = start;
 			}
-			IntVar profit = enumerated(n + "_profit", 0, h.profit);
+			IntVar profit = enumerated(name + "_profit", 0, h.profit);
 			allProfits.add(profit);
 			post(element(profit, new int[] { 0, h.profit }, last.onSchedule));
 
 			SetVar usedItvs = setVar(e.getKey() + "_itv", new int[] {}, allIntervals);
 			union(hpcstarts, usedItvs).post();
 			hpcIntervals.put(e.getKey(), usedItvs);
+			for (int itv = 0; itv < appPositions.length; itv++) {
+				// position[i][hpc]>=0 <=> intervals(hpc).contains(id)
+				arithm(appPositions[itv][idx], ">=", 0).reifyWith(member(intVar(itv), usedItvs).reify());
+			}
 		}
 	}
 
@@ -282,7 +287,7 @@ public class AppScheduler extends Model {
 	 * positions[i][j] is the position at interval i of the application j . if it
 	 * is -1 (for an hpc app) then the application is not run at interval i.
 	 */
-	protected IntVar[][] positions;
+	protected IntVar[][] appPositions;
 
 	/**
 	 * make the variables related to the position of the applications. The
@@ -290,20 +295,13 @@ public class AppScheduler extends Model {
 	 * If web apps don't need any specific constraint, the hpc apps must have NO
 	 * host (value -1) when no subtask is executed on given interval.
 	 */
-	protected void makePositions() {
-		positions = new IntVar[model.nbIntervals][index2AppName.length];
+	protected void makeAppPositions() {
+		appPositions = new IntVar[model.nbIntervals][index2AppName.length];
 		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
 			String appName = index2AppName[appIdx];
 			boolean isWeb = model.webs.containsKey(appName);
-			for (int itv = 0; itv < positions.length; itv++) {
-				positions[itv][appIdx] = intVar("appPos_" + itv + "_" + appIdx, isWeb ? 0 : -1, model.nbServers() - 1);
-			}
-			if (!isWeb) {
-				SetVar intervals = hpcIntervals.get(appName);
-				for (int itv = 0; itv < positions.length; itv++) {
-					// position[i][hpc]>=0 <=> intervals(hpc).contains(id)
-					arithm(positions[itv][appIdx], ">=", 0).reifyWith(member(intVar(itv), intervals).reify());
-				}
+			for (int itv = 0; itv < appPositions.length; itv++) {
+				appPositions[itv][appIdx] = intVar("app_" + appIdx + "_pos_" + itv, isWeb ? 0 : -1, model.nbServers() - 1);
 			}
 		}
 	}
@@ -323,10 +321,10 @@ public class AppScheduler extends Model {
 			boolean isWeb = model.webs.containsKey(appName);
 			for (int itv = 1; itv < model.nbIntervals; itv++) {
 				if (isWeb) {
-					isMigrateds[itv][appIdx] = arithm(positions[itv][appIdx], "!=", positions[itv - 1][appIdx]).reify();
+					isMigrateds[itv][appIdx] = arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reify();
 				} else {
-					isMigrateds[itv][appIdx] = and(arithm(positions[itv - 1][appIdx], "!=", -1),
-							arithm(positions[itv][appIdx], "!=", positions[itv - 1][appIdx])).reify();
+					isMigrateds[itv][appIdx] = and(arithm(appPositions[itv - 1][appIdx], "!=", -1),
+							arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx])).reify();
 				}
 			}
 		}
@@ -418,7 +416,7 @@ public class AppScheduler extends Model {
 				for (int appIdx = 0; appIdx < powerOnServers.length; appIdx++) {
 					IntVar power = intVar("app_" + appIdx + "_powerat_" + itv + "_on_" + servIdx, 0, maxpower);
 					powerOnServers[appIdx] = power;
-					post(times(arithm(positions[itv][appIdx], "=", servIdx).reify(), appPowers[itv][appIdx], power));
+					post(times(arithm(appPositions[itv][appIdx], "=", servIdx).reify(), appPowers[itv][appIdx], power));
 				}
 			}
 		}
@@ -495,8 +493,8 @@ public class AppScheduler extends Model {
 		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
 			String appName = index2AppName[appIdx];
 			List<String> positionsl = new ArrayList<>();
-			for (int itv = 0; itv < this.positions.length; itv++) {
-				int positionIdx = s.getIntVal(this.positions[itv][appIdx]);
+			for (int itv = 0; itv < this.appPositions.length; itv++) {
+				int positionIdx = s.getIntVal(this.appPositions[itv][appIdx]);
 				positionsl.add(positionIdx == -1 ? null : index2ServName[positionIdx]);
 			}
 			ret.appHosters.put(appName, positionsl);
@@ -517,7 +515,7 @@ public class AppScheduler extends Model {
 		index2ServName = null;
 		isMigrateds = null;
 		migrationCosts = null;
-		positions = null;
+		appPositions = null;
 		servName2Index.clear();
 		servPowers = null;
 		webModes.clear();
@@ -530,12 +528,17 @@ public class AppScheduler extends Model {
 	public SchedulingResult solve(SchedulingModel m) {
 		clearCache();
 		model = m;
+		// first we create indexes for the servers and the applications
 		affectIndexes();
-		makeWebTasks();
-		makeHPCTasks();
-		makePositions();
+		// then we create position variables for each interval and each app
+		makeAppPositions();
+		// we make migration cost at each interval : a VM is migrated if was running
+		// at previous interval and present interval is different from previous
 		makeIsMigrateds();
 		makeMigrationCosts();
+
+		makeWebTasks();
+		makeHPCTasks();
 		makeAppPowers();
 		makeReductionTasks();
 		makeCumulative();
