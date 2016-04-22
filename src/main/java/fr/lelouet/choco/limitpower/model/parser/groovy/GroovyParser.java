@@ -77,7 +77,7 @@ public class GroovyParser {
 	protected class LimitLink {
 
 		public void putAt(int idx, int power) {
-			model.setLimit(idx, power);
+			model.setPower(idx, power);
 		}
 	}
 

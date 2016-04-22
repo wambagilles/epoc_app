@@ -43,7 +43,7 @@ public class TestPosition {
 		m.addWeb("web", 2, 3);
 		m.server("s0").maxPower=1;
 		m.server("s1").maxPower=2;
-		m.setLimit(1, 2);
+		m.setPower(1, 2);
 		r = AppScheduler.solv(m);
 		Assert.assertEquals(r.appHosters.get("web"), Arrays.asList("s1", "s1", "s1"));
 		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s0", null, "s0"));

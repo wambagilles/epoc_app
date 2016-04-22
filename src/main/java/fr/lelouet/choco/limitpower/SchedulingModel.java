@@ -147,7 +147,7 @@ public class SchedulingModel {
 
 	protected HashMap<Integer, Integer> powerlimits = new HashMap<>();
 
-	public Stream<Map.Entry<Integer, Integer>> getLimits() {
+	public Stream<Map.Entry<Integer, Integer>> getPowers() {
 		return powerlimits.entrySet().stream();
 	}
 
@@ -159,12 +159,12 @@ public class SchedulingModel {
 	 * @param power
 	 *          the maximum power
 	 */
-	public void setLimit(int interval, int power) {
+	public void setPower(int interval, int power) {
 		powerlimits.put(interval, power);
 	}
 
-	public int limit(int idx) {
-		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : 0;
+	public int getPower(int idx) {
+		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : maxPower;
 	}
 
 	//

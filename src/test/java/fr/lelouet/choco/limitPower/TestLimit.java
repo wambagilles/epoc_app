@@ -30,21 +30,21 @@ public class TestLimit {
 
 	@Test
 	public void testLimit() {
-		m.setLimit(0, 2);
-		m.setLimit(1, 2);
-		m.addHPC("a", 0, 1, 2, 1, 1000);
+		m.addHPC("a", 0, 1, 2, 1, -1);
 		m.maxPower = 2;
 		m.nbIntervals = 2;
 
 		// we limit the power by two on both intervals : the hpc can't be scheduled
+		m.setPower(0, 0);
+		m.setPower(1, 0);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 
 		// we limit the power by 1 on first intervals : the hpc is scheduled on
 		// second interval
-		m.setLimit(0, 1);
-		m.setLimit(1, 0);
+		m.setPower(0, 1);
+		m.setPower(1, 2);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
@@ -52,8 +52,8 @@ public class TestLimit {
 
 		// we limit the power by 1 on last intervals : the hpc is scheduled on first
 		// interval
-		m.setLimit(0, 0);
-		m.setLimit(1, 1);
+		m.setPower(0, 2);
+		m.setPower(1, 1);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
