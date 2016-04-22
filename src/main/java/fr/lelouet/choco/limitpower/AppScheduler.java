@@ -223,7 +223,7 @@ public class AppScheduler extends Model {
 				IntVar end = makeTimeSlotVar(subTaskName + "_end");
 				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
 				arithm(end, "<=", h.deadline > 0 ? Math.min(h.deadline, model.nbIntervals) : model.nbIntervals)
-						.reifyWith(onSchedule);
+				.reifyWith(onSchedule);
 				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
 				post(element(power, new int[] { 0, h.power }, onSchedule));
 				if (last != null) {
@@ -307,10 +307,10 @@ public class AppScheduler extends Model {
 				hpcExecuteds.put(appName, executions);
 			}
 			for (int itv = 0; itv < appPositions.length; itv++) {
-				IntVar position = intVar("app_" + appIdx + "_pos_" + itv, isWeb ? 0 : -1, model.nbServers() - 1);
+				IntVar position = intVar("appPos_" + itv + "_" + appIdx, isWeb ? 0 : -1, model.nbServers() - 1);
 				appPositions[itv][appIdx] = position;
 				if (!isWeb) {
-					BoolVar executed = boolVar("app_" + appIdx + "_executed_" + itv);
+					BoolVar executed = boolVar("appExec_" + itv + "_" + appIdx);
 					executions[itv] = executed;
 					arithm(position, ">=", 0).reifyWith(executed);
 				}
@@ -332,14 +332,14 @@ public class AppScheduler extends Model {
 			String appName = index2AppName[appIdx];
 			boolean isWeb = model.webs.containsKey(appName);
 			for (int itv = 1; itv < model.nbIntervals; itv++) {
+				isMigrateds[itv][appIdx] = boolVar("appMig_" + itv + "_" + appIdx);
 				if (isWeb) {
-					isMigrateds[itv][appIdx] = boolVar("app_" + appIdx + "_migrated_" + itv);
 					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(isMigrateds[itv][appIdx]);
 				} else {
-					isMigrateds[itv][appIdx] = boolVar("app_" + appIdx + "_migrated_" + itv);
-					BoolVar moved = boolVar("app_" + appIdx + "_moved_" + itv);
+					BoolVar moved = boolVar("appMoved_" + itv + "_" + appIdx);
 					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(moved);
-					and(hpcExecuteds.get(appName)[itv - 1], moved).reifyWith(isMigrateds[itv][appIdx]);
+					and(hpcExecuteds.get(appName)[itv - 1], moved, hpcExecuteds.get(appName)[itv])
+							.reifyWith(isMigrateds[itv][appIdx]);
 				}
 			}
 		}
@@ -375,7 +375,7 @@ public class AppScheduler extends Model {
 		for (int i = 0; i < model.nbIntervals; i++) {
 			int limit = model.getPower(i);
 			addTask(reductionTask(i),
-					(limit == model.maxPower) ? migrationCosts[i] : intOffsetView(migrationCosts[i], model.maxPower - limit));
+					limit == model.maxPower ? migrationCosts[i] : intOffsetView(migrationCosts[i], model.maxPower - limit));
 		}
 	}
 
@@ -430,9 +430,9 @@ public class AppScheduler extends Model {
 				IntVar[] powerOnServers = new IntVar[index2AppName.length];
 				int maxpower = model.serversByName.get(index2ServName[servIdx]).maxPower;
 				for (int appIdx = 0; appIdx < powerOnServers.length; appIdx++) {
-					IntVar power = intVar("app_" + appIdx + "_powerat_" + itv + "_on_" + servIdx, 0, maxpower);
+					IntVar power = intVar("appPwrOn_" + itv + "_" + appIdx + "_" + servIdx, 0, maxpower);
 					powerOnServers[appIdx] = power;
-					BoolVar execution = boolVar("app_" + appIdx + "_ison_" + servIdx + "_at_" + itv);
+					BoolVar execution = boolVar("appExecOn_" + itv + "_" + appIdx + "_" + servIdx);
 					arithm(appPositions[itv][appIdx], "=", servIdx).reifyWith(execution);
 					post(times(execution, appPowers[itv][appIdx], power));
 				}

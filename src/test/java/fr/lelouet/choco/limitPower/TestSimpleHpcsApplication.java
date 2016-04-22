@@ -43,7 +43,7 @@ public class TestSimpleHpcsApplication {
 
 		// the HPC task fits perfectly in the 2-duration, 2-power intervals
 		m.maxPower = 2;
-		m.nbIntervals = 3;
+		m.nbIntervals = 2;
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
@@ -61,7 +61,7 @@ public class TestSimpleHpcsApplication {
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 	}
-	
+
 	@Test
 	public void testTwoApps() {
 		HPC a = new HPC(0, 2, 2, 2, 10);
