@@ -31,7 +31,7 @@ public class TestLimit {
 	@Test
 	public void testLimit() {
 		m.addHPC("a", 0, 1, 2, 1, -1);
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 2;
 
 		// we limit the power by two on both intervals : the hpc can't be scheduled

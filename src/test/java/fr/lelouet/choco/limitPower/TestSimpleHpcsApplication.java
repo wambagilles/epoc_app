@@ -28,7 +28,7 @@ public class TestSimpleHpcsApplication {
 		m.addHPC("a", h);
 
 		// the HPC task fits perfectly in the 1-duration, 1-power intervals
-		m.maxPower = 1;
+		m.setPower(1);
 		m.nbIntervals = 1;
 		r = solv(m);
 		Assert.assertNotNull(r);
@@ -38,24 +38,24 @@ public class TestSimpleHpcsApplication {
 	@Test
 	public void testSimpleApp() {
 
-		HPC h = new HPC(0, 2, 2, 1, 1);
+		HPC h = new HPC(0, 2, 2, 1, 0);
 		m.addHPC("a", h);
 
 		// the HPC task fits perfectly in the 2-duration, 2-power intervals
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 2;
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
 
 		// not enough power : profit is 0
-		m.maxPower = 1;
+		m.setPower(1);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 
 		// not enough intervals : profit is 0
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 1;
 		r = solv(m);
 		Assert.assertNotNull(r);
@@ -70,21 +70,21 @@ public class TestSimpleHpcsApplication {
 		m.addHPC("c", b);
 
 		// enough power * duration to fit both at the same time
-		m.maxPower = 4;
+		m.setPower(4);
 		m.nbIntervals = 2;
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3, "" + r);
 
 		// enough power * duration to fit both sequentially
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 4;
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3, "" + r);
 
 		// enough power * duration to fit one sequentially
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 2;
 		r = solv(m);
 		Assert.assertNotNull(r);

@@ -32,12 +32,13 @@ public class TestPosition {
 	}
 
 	@Test
-	// 3intervals, one server with 2 power cap, one with 1 power cp. theHPC
-	// consumes 1 power. the web has two modes, gain=power*2-1, power=0 or 1
+	// 3 intervals, one server with 2 power cap, one with 1 power cap.<br />
+	// the HPC consumes 1 power.
+	// the web has two modes, gain=power*2-1, power=0 or 1
 	// one reduction by 1 power at the 2d interval (itv 1)
 	public void testSchduling2apps() {
 		m.nbIntervals = 2;
-		m.maxPower = 3;
+		m.setPower(3);
 		m.addHPC("hpc", 0, 2, 1, 3, -1);
 		m.addWeb("web", 1, 1);
 		m.addWeb("web", 2, 3);
@@ -45,8 +46,8 @@ public class TestPosition {
 		m.server("s1").maxPower=2;
 		m.setPower(1, 2);
 		r = AppScheduler.solv(m);
-		Assert.assertEquals(r.appHosters.get("web"), Arrays.asList("s1", "s1", "s1"));
-		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s0", null, "s0"));
+		Assert.assertEquals(r.appHosters.get("web"), Arrays.asList("s1", "s1", "s1"), "" + r);
+		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s0", null, "s0"), "" + r);
 	}
 
 }

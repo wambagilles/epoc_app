@@ -37,7 +37,7 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testOneAppOneInterval() {
-		m.maxPower = 1;
+		m.setPower(1);
 		m.nbIntervals = 1;
 		m.addHPC("a", 0, 2, 1, 1, 10);
 		r = solv(m);
@@ -51,7 +51,7 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testOneAppTwoInterval() {
-		m.maxPower = 1;
+		m.setPower(1);
 		m.nbIntervals = 2;
 		m.addHPC("a", 0, 3, 1, 1, 10);
 		r = solv(m);
@@ -65,7 +65,7 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testTwoApps() {
-		m.maxPower = 3;
+		m.setPower(3);
 		m.nbIntervals = 3;
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		m.addHPC("b", 0, 2, 3, 3, 10);

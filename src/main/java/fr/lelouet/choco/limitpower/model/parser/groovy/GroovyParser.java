@@ -58,7 +58,7 @@ public class GroovyParser {
 	protected class TotalLink {
 
 		public TotalLink power(int power) {
-			model.maxPower = power;
+			model.setPower(power);
 			return this;
 		}
 

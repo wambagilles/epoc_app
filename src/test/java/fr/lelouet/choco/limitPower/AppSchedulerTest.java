@@ -31,7 +31,7 @@ public class AppSchedulerTest {
 		m.server("server").maxPower = 1000;
 		m.nameWeb("w1").add(50, 120);
 		m.nbIntervals = 2;
-		m.maxPower = 1000;
+		m.setPower(1000);
 		Assert.assertNotNull(AppScheduler.solv(m));
 	}
 }

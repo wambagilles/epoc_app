@@ -3,15 +3,14 @@ package fr.lelouet.choco.limitpower;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 
 /**
@@ -40,7 +39,16 @@ public class SchedulingModel {
 
 	public int nbIntervals = 6;
 
-	public int maxPower = 100;
+	protected int maxPower = 100;
+
+	public void setPower(int power) {
+		this.maxPower = power;
+		powerlimits.clear();
+	}
+
+	public int getMaxPower() {
+		return maxPower;
+	}
 
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
 
@@ -145,11 +153,7 @@ public class SchedulingModel {
 		addHPC(name, new HPC(start, duration, power, benefit, deadline));
 	}
 
-	protected HashMap<Integer, Integer> powerlimits = new HashMap<>();
-
-	public Stream<Map.Entry<Integer, Integer>> getPowers() {
-		return powerlimits.entrySet().stream();
-	}
+	protected TIntIntHashMap powerlimits = new TIntIntHashMap();
 
 	/**
 	 * set a different limit for given interval
@@ -160,7 +164,11 @@ public class SchedulingModel {
 	 *          the maximum power
 	 */
 	public void setPower(int interval, int power) {
-		powerlimits.put(interval, power);
+		if (power == maxPower) {
+			powerlimits.remove(interval);
+		} else {
+			powerlimits.put(interval, power);
+		}
 	}
 
 	public int getPower(int idx) {

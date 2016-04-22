@@ -26,7 +26,7 @@ public class TestSimpleWebApplication {
 	public void testOnePassingWeb() {
 		m.nameWeb("a").add(1, 1).add(5, 3);
 
-		m.maxPower = 2;
+		m.setPower(2);
 		m.nbIntervals = 1;
 		r = solv(m);
 		Assert.assertNotNull(r);
@@ -34,7 +34,7 @@ public class TestSimpleWebApplication {
 		Assert.assertEquals(r.profit, 1);
 
 		// now we allow 5 power use, so we can have a profit of 3
-		m.maxPower = 5;
+		m.setPower(5);
 		m.nbIntervals = 1;
 		r = solv(m);
 		Assert.assertNotNull(r);
@@ -51,23 +51,23 @@ public class TestSimpleWebApplication {
 		m.nameWeb("a").add(1, 1).add(5, 2).add(17, 6);
 		m.nameWeb("b").add(2, 1).add(6, 2).add(18, 6);
 
-		m.maxPower = 3;
+		m.setPower(3);
 		m.nbIntervals = 1;
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 2);
 
-		m.maxPower = 7;
+		m.setPower(7);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3);
 
-		m.maxPower = 11;
+		m.setPower(11);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 4);
 
-		m.maxPower = 40;
+		m.setPower(40);
 		r = solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 12);
