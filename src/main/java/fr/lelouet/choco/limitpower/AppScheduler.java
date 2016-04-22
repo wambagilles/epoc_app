@@ -561,20 +561,20 @@ public class AppScheduler extends Model {
 		makeAppPowers();
 		makeReductionTasks();
 		makeCumulative();
-		getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
-
-			@Override
-			public String print() {
-				Variable[] vars = getSolver().getStrategy().getVariables();
-				StringBuilder s = new StringBuilder(32);
-				for (int i = 0; i < vars.length; i++) {
-					s.append(vars[i]).append(' ');
-				}
-				return s.toString();
-			}
-		});
-		getSolver().showContradiction();
-		getSolver().showSolutions();
+//		getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
+//
+//			@Override
+//			public String print() {
+//				Variable[] vars = getSolver().getStrategy().getVariables();
+//				StringBuilder s = new StringBuilder(32);
+//				for (int i = 0; i < vars.length; i++) {
+//					s.append(vars[i]).append(' ');
+//				}
+//				return s.toString();
+//			}
+//		});
+//		getSolver().showContradiction();
+//		getSolver().showSolutions();
 		setObjective(ResolutionPolicy.MAXIMIZE, makeObjective());
 		Solution s = new Solution(this);
 		while (solve()) {

@@ -39,7 +39,7 @@ public class SchedulingModel {
 
 	public int nbIntervals = 6;
 
-	protected int maxPower = 100;
+	protected int maxPower = 0;
 
 	public void setPower(int power) {
 		this.maxPower = power;
@@ -48,6 +48,28 @@ public class SchedulingModel {
 
 	public int getMaxPower() {
 		return maxPower;
+	}
+
+	protected TIntIntHashMap powerlimits = new TIntIntHashMap();
+
+	/**
+	 * set a different limit for given interval
+	 *
+	 * @param interval
+	 *          the index of the interval(starting 0)
+	 * @param power
+	 *          the maximum power at this interval. must be &lt; maxpower
+	 */
+	public void setPower(int interval, int power) {
+		if (power >= maxPower) {
+			powerlimits.remove(interval);
+		} else {
+			powerlimits.put(interval, power);
+		}
+	}
+
+	public int getPower(int idx) {
+		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : maxPower;
 	}
 
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
@@ -151,28 +173,6 @@ public class SchedulingModel {
 
 	public void addHPC(String name, int start, int duration, int power, int benefit, int deadline) {
 		addHPC(name, new HPC(start, duration, power, benefit, deadline));
-	}
-
-	protected TIntIntHashMap powerlimits = new TIntIntHashMap();
-
-	/**
-	 * set a different limit for given interval
-	 *
-	 * @param interval
-	 *          the index of the interval(starting 0)
-	 * @param power
-	 *          the maximum power
-	 */
-	public void setPower(int interval, int power) {
-		if (power == maxPower) {
-			powerlimits.remove(interval);
-		} else {
-			powerlimits.put(interval, power);
-		}
-	}
-
-	public int getPower(int idx) {
-		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : maxPower;
 	}
 
 	//
