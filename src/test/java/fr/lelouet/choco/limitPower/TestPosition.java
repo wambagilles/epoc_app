@@ -18,6 +18,7 @@ public class TestPosition {
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
+		m.setPower(25000);
 		m.server("s1").maxPower = 1000;
 	}
 
@@ -27,8 +28,8 @@ public class TestPosition {
 		m.nbIntervals = 2;
 		m.addHPC("hpc", 0, 2, 1, 1, -1);
 		r = AppScheduler.solv(m);
-		Assert.assertEquals(r.profit, 1);
-		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s1", "s1"));
+		Assert.assertEquals(r.profit, 1, "" + r);
+		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s1", "s1"), "" + r);
 	}
 
 	@Test
@@ -83,9 +84,11 @@ public class TestPosition {
 		m.addWeb("w2", 3, 7);
 
 		r = AppScheduler.solv(m);
-		//TODO
-		System.out.println(""+r);
-		
+
+		Assert.assertEquals(r.profit, 34);
+		Assert.assertEquals(r.appHosters.get("w2"), Arrays.asList("s3", "s3", "s3"));
+		Assert.assertEquals(r.appHosters.get("w1"), Arrays.asList("s2", "s2", "s2"));
+		Assert.assertEquals(r.appHosters.get("w0"), Arrays.asList("s1", "s1", "s1"));
 	}
 
 }

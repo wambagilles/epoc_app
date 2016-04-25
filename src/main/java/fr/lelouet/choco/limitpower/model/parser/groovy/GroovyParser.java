@@ -21,7 +21,7 @@ public class GroovyParser {
 		shell.getContext().setVariable("web", new WebLink());
 		shell.getContext().setVariable("hpc", new HpcLink());
 		shell.getContext().setVariable("total", new TotalLink());
-		shell.getContext().setVariable("limit", new LimitLink());
+		shell.getContext().setVariable("power", new PowerLink());
 	}
 
 	public void parseLine(String line) {
@@ -57,11 +57,6 @@ public class GroovyParser {
 
 	protected class TotalLink {
 
-		public TotalLink power(int power) {
-			model.setPower(power);
-			return this;
-		}
-
 		public TotalLink intervals(int nb) {
 			model.nbIntervals = nb;
 			return this;
@@ -74,10 +69,14 @@ public class GroovyParser {
 
 	}
 
-	protected class LimitLink {
+	protected class PowerLink {
 
 		public void putAt(int idx, int power) {
 			model.setPower(idx, power);
+		}
+
+		public void leftShift(int power) {
+			model.setPower(power);
 		}
 	}
 

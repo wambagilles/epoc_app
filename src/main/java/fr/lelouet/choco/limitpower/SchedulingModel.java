@@ -42,7 +42,7 @@ public class SchedulingModel {
 	protected int maxPower = 0;
 
 	public void setPower(int power) {
-		this.maxPower = power;
+		maxPower = power;
 		powerlimits.clear();
 	}
 

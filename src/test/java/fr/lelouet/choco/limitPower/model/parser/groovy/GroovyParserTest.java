@@ -24,7 +24,7 @@ public class GroovyParserTest {
 		test.parseLine("hpc[\"h3\"].power(2).start(1).duration(3).profit(4).deadline(6)");
 		Assert.assertEquals(m.getHPC("h3"), new HPC(1, 3, 2, 4, 6));
 
-		test.parseLine("limit[2]=3;limit[4]=1");
+		test.parseLine("power<<5;power[2]=3;power[4]=1");
 		Assert.assertEquals(m.getPower(2), 3);
 		Assert.assertEquals(m.getPower(4), 1);
 	}
