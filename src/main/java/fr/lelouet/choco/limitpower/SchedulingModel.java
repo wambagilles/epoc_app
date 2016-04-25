@@ -62,6 +62,9 @@ public class SchedulingModel {
 	 */
 	public void setPower(int interval, int power) {
 		if (power >= maxPower) {
+			if (maxPower == 0) {
+				maxPower=power;
+			}
 			powerlimits.remove(interval);
 		} else {
 			powerlimits.put(interval, power);
