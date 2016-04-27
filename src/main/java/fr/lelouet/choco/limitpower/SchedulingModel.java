@@ -3,9 +3,11 @@ package fr.lelouet.choco.limitpower;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import fr.lelouet.choco.limitpower.model.HPC;
@@ -233,6 +235,20 @@ public class SchedulingModel {
 
 	public Stream<Entry<String, Server>> servers() {
 		return serversByName.entrySet().stream();
+	}
+	
+	///////////////////
+	// resources
+	///////////////////
+	
+	protected HashMap<String, ToIntFunction<String>> resources = new HashMap<>();
+
+	public void setResource(String name, ToIntFunction<String> mapping) {
+		resources.put(name, mapping);
+	}
+
+	public Stream<Entry<String, ToIntFunction<String>>> resources() {
+		return resources.entrySet().stream();
 	}
 
 }
