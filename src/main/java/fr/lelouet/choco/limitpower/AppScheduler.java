@@ -45,6 +45,7 @@ import gnu.trove.map.hash.TObjectIntHashMap;
  */
 public class AppScheduler extends Model {
 
+	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppScheduler.class);
 
 	protected SchedulingModel model = new SchedulingModel();
