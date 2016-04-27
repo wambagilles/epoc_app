@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -451,6 +452,21 @@ public class AppScheduler extends Model {
 	}
 
 	//
+	// pack the resources
+	//
+
+	protected void makePackings() {
+		model.resources().forEach(e -> {
+			String name = e.getKey();
+			ToIntFunction<String> m = e.getValue();
+			int[] serversCapas = new int[model.nbServers()+1];
+			for (int i = 1; i < serversCapas.length; i++) {
+			}
+			int[] appuse = new int[index2AppName.length];
+		});
+	}
+
+	//
 	// define objective
 	//
 
@@ -559,6 +575,7 @@ public class AppScheduler extends Model {
 		makeAppPowers();
 		makeReductionTasks();
 		makeCumulative();
+		makePackings();
 
 		if (debug) {
 			getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
