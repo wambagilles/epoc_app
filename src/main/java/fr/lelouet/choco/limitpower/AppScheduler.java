@@ -46,7 +46,6 @@ import gnu.trove.map.hash.TObjectIntHashMap;
  */
 public class AppScheduler extends Model {
 
-	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppScheduler.class);
 
 	protected SchedulingModel model = new SchedulingModel();
@@ -459,11 +458,23 @@ public class AppScheduler extends Model {
 	protected void makePackings() {
 		model.resources().forEach(e -> {
 			String name = e.getKey();
-			ToIntFunction<String> m = e.getValue();
-			int[] serversCapas = new int[model.nbServers()+1];
+			ToIntFunction<String> res = e.getValue();
+			int[] serversCapas = new int[index2ServName.length + 1];
+			serversCapas[0] = Integer.MAX_VALUE - 1;
 			for (int i = 1; i < serversCapas.length; i++) {
+				serversCapas[i] = res.applyAsInt(index2ServName[i - 1]);
 			}
 			int[] appuse = new int[index2AppName.length];
+			for (int i = 0; i < index2AppName.length; i++) {
+				appuse[i] = res.applyAsInt(index2AppName[i]);
+			}
+			for (int itv = 0; itv < model.nbIntervals; itv++) {
+				IntVar[] serversLoads = new IntVar[serversCapas.length];
+				for (int servIdx = 0; servIdx < serversLoads.length; servIdx++) {
+					serversLoads[servIdx] = intVar(name + "_serverload_" + itv + "_" + (servIdx - 1), 0, serversCapas[servIdx]);
+				}
+				binPacking(appPositions[itv], appuse, serversLoads, -1).post();
+			}
 		});
 	}
 
