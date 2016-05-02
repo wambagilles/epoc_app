@@ -44,6 +44,8 @@ public class SchedulingModel {
 
 	protected int maxPower = 0;
 
+	protected int migrationCostDiv = 10;
+
 	public void setPower(int power) {
 		maxPower = power;
 		powerlimits.clear();

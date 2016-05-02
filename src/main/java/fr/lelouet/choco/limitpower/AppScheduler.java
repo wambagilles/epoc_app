@@ -347,18 +347,45 @@ public class AppScheduler extends Model {
 		}
 	}
 
-	// migrationCosts[i] is thecost of vm migration at interval i
+	// migrationCosts[i] is the cost of vm migration at interval i
 	protected IntVar[] migrationCosts = null;
+
+	/**
+	 * x*y+r=z ; r>>0, r<x || r<y
+	 *
+	 * @param x
+	 *          &gt; 0
+	 * @param y
+	 *          &gt; 0
+	 * @param z
+	 *          &gt; 0
+	 * @return a new constraint specifying x*y+r==z
+	 */
+	protected Constraint timesEucl(IntVar x, IntVar y, IntVar z) {
+		IntVar remain=intVar(0, Math.max(x.getUB(), y.getUB()));
+		or(arithm(remain, "<", x), arithm(remain, "<", y)).post();
+		IntVar exactMult = intVar(0, Integer.MAX_VALUE);
+		times(x, y, exactMult).post();
+		return arithm(exactMult, "+", remain, "=", z);
+	}
 
 	protected void makeMigrationCosts() {
 		migrationCosts = new IntVar[model.nbIntervals];
-		int[] coefs = new int[index2AppName.length];
-		for (int i = 0; i < coefs.length; i++) {
-			coefs[i] = 1;
-		}
-		for (int i = 0; i < migrationCosts.length; i++) {
-			migrationCosts[i] = intVar("migrationCost_" + i, 0, index2AppName.length * 1);
-			post(scalar(isMigrateds[i], coefs, "=", migrationCosts[i]));
+		for (int itv = 0; itv < migrationCosts.length; itv++) {
+			IntVar[] coefs = new IntVar[index2AppName.length];
+			for (int i = 0; i < coefs.length; i++) {
+				coefs[i] = intVar(1);
+			}
+			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, Integer.MAX_VALUE);
+			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, Integer.MAX_VALUE);
+			IntVar[] appCost = new IntVar[index2AppName.length];
+			for (int appIdx = 0; appIdx < appCost.length; appIdx++) {
+				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, Integer.MAX_VALUE);
+				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]);
+			}
+			sum(appCost, "=", unScaledMigrationCost).post();
+			// migrationcost*10=unscaled
+			timesEucl(migrationCosts[itv], intVar(model.migrationCostDiv), unScaledMigrationCost);
 		}
 	}
 
