@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 
 
 /**
@@ -199,6 +200,10 @@ public class SchedulingModel {
 				+ powerlimits;
 	}
 
+	/////////////////////////
+	// server position
+	/////////////////////////
+
 	/** a server has a name, and a power(=cpu) capacity. */
 	public class Server {
 
@@ -236,11 +241,11 @@ public class SchedulingModel {
 	public Stream<Entry<String, Server>> servers() {
 		return serversByName.entrySet().stream();
 	}
-	
+
 	///////////////////
 	// resources
 	///////////////////
-	
+
 	protected HashMap<String, ToIntFunction<String>> resources = new HashMap<>();
 
 	public void setResource(String name, ToIntFunction<String> mapping) {
@@ -251,4 +256,31 @@ public class SchedulingModel {
 		return resources.entrySet().stream();
 	}
 
+	///////////////////
+	// previous position and modes
+	///////////////////
+
+	/**
+	 * The class previous contains data just before the first interval. It gives the possiblity to find if an app is
+	 * migrated and its migration cost.
+	 *
+	 * @author guillaume
+	 */
+	public class Previous {
+
+		/**
+		 * previous location of the wep/hpc apps. If an app name is not mapped to a Server name, the app is not migrate
+		 * wherever it is placed on the first interval. If the app name is mapped to a Server name, this app is migrated on
+		 * first interval if its servers has a different name. Obvioulsy, if the server name stands for no server in the
+		 * problem, the app is migrated on first interval.
+		 */
+		public final HashMap<String, String> pos = new HashMap<>();
+		/**
+		 * previous power mode of the web apps. If not present here, a web app has not migration cost for the first
+		 * interval. we don't check the presence of a corresponding webmode.
+		 */
+		public final TObjectIntHashMap<String> power = new TObjectIntHashMap<>();
+	}
+
+	public final Previous previous = new Previous();
 }

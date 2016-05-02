@@ -323,7 +323,14 @@ public class AppScheduler extends Model {
 	protected void makeIsMigrateds() {
 		isMigrateds = new BoolVar[model.nbIntervals][index2AppName.length];
 		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
-			isMigrateds[0][appIdx] = boolVar(false);
+			String prevHosName = model.previous.pos.get(index2AppName);
+			if (prevHosName != null && servName2Index.containsKey(prevHosName)) {
+				isMigrateds[0][appIdx] = boolVar("appMig_" + 0 + "_" + appIdx);
+				int prevIdx = servName2Index.get(prevHosName);
+				arithm(appPositions[0][appIdx], "!=", prevIdx).reifyWith(isMigrateds[0][appIdx]);
+			} else {
+				isMigrateds[0][appIdx] = boolVar(false);
+			}
 			String appName = index2AppName[appIdx];
 			boolean isWeb = model.webs.containsKey(appName);
 			for (int itv = 1; itv < model.nbIntervals; itv++) {
