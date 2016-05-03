@@ -350,25 +350,6 @@ public class AppScheduler extends Model {
 	// migrationCosts[i] is the cost of vm migration at interval i
 	protected IntVar[] migrationCosts = null;
 
-	/**
-	 * x*y+r=z ; r>>0, r<x || r<y
-	 *
-	 * @param x
-	 *          &gt; 0
-	 * @param y
-	 *          &gt; 0
-	 * @param z
-	 *          &gt; 0
-	 * @return a new constraint specifying x*y+r==z
-	 */
-	protected Constraint timesEucl(IntVar x, IntVar y, IntVar z) {
-		IntVar remain=intVar(0, Math.max(x.getUB(), y.getUB()));
-		or(arithm(remain, "<", x), arithm(remain, "<", y)).post();
-		IntVar exactMult = intVar(0, Integer.MAX_VALUE);
-		times(x, y, exactMult).post();
-		return arithm(exactMult, "+", remain, "=", z);
-	}
-
 	protected void makeMigrationCosts() {
 		migrationCosts = new IntVar[model.nbIntervals];
 		for (int itv = 0; itv < migrationCosts.length; itv++) {
@@ -384,8 +365,8 @@ public class AppScheduler extends Model {
 				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]);
 			}
 			sum(appCost, "=", unScaledMigrationCost).post();
-			// migrationcost*10=unscaled
-			timesEucl(migrationCosts[itv], intVar(model.migrationCostDiv), unScaledMigrationCost);
+			// unscaled/10 = migrationcost
+			div(unScaledMigrationCost, intVar(model.migrationCostDiv), migrationCosts[itv]);
 		}
 	}
 
