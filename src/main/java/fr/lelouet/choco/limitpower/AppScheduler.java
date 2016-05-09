@@ -623,7 +623,7 @@ public class AppScheduler extends Model {
 
 		setObjective(ResolutionPolicy.MAXIMIZE, makeObjective());
 		Solution s = new Solution(this);
-		while (solve()) {
+		while (getSolver().solve()) {
 			s.record();
 		}
 		return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
