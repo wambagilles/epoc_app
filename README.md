@@ -33,3 +33,14 @@ Lorsque cette application est schédulée, elle consomme des ressources (cpu, ra
 ##Situation initiale
 
 Le centre est dans une situation initiale dans laquelle certaines applications sont déjà exécutées.
+
+#Travaux existants
+
+##Pika
+
+#Implémentation
+
+#Performances
+
+#Divers
+
