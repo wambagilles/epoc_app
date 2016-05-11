@@ -27,7 +27,7 @@ Chaque application web peut être arrétée par son possesseur son bon vouloir. 
 
 ###Applications HPC
 
-Une aplication HPC propose un bénéfice, une durée (en intervales), une consommation énergétique et une échéance. Le bénéfice n'est assuré que si cette application a bien été exécutée autant de fois que le demande sa durée, avant son échéance.
+Une application HPC propose un bénéfice, une durée (en intervales), une consommation énergétique et une échéance. Le bénéfice n'est assuré que si cette application a bien été exécutée autant de fois que le demande sa durée, avant son échéance.
 Lorsque cette application est schédulée, elle consomme des ressources (cpu, ram) du serveur qui l'héberge. Lorsque cette application n'est pas schédulée, elle est mise en veille sur un disque dur de taille infinie, sa consommation est nulle.
 
 ##Limitations énergétiques
@@ -40,7 +40,15 @@ Le centre est dans une situation initiale dans laquelle certaines applications s
 
 ##Pika
 
+L'article [Opportunistic Scheduling in Clouds Partially Powered by Green Energy](https://hal.inria.fr/hal-01205911v1) propose un framework d'aide à la décision évènementiel. Ce framework déplace et exécute des applications afin d'améliorer le taux d'utilisation d'énergie grise dans un centre.
+
 #Implémentation
+
+L'implémentation est faite en Java, plus particulièrement avec [le solveur de contraintes Choco](https://github.com/chocoteam/choco-solver).
+
+## Plannification spatio-temporelle.
+
+Les applications web doivent êre exécutées à chaque intervale. Une première variable est, à chaque intervale, le mode d'exécution de cette application.
 
 ## Planification des HPC hors-plan
 
@@ -48,7 +56,7 @@ Si une application de type HPC est trop longue pour tenir sur le nombre d'interv
 
 ### Problématique
 
-Par exemple, supposons un placement sur 2 intervalles, et une application HPC de durée 3 et d'échéance 3. Cette application ne pourra pas être planifiée sur trois intervalles dans la plage des deux intervalles considérés. Cependant en exécutant cette application sur les deux intervalles considérés et sur l'intervalle suivant, elle serait terminé à la prochaine planification et apporterait donc son bénéfice.
+Par exemple, supposons un placement sur 2 intervalles, et une application HPC de durée 3 et d'échéance 3. Cette application ne pourra pas être planifiée sur trois intervalles dans la plage des deux intervalles considérés. Cependant en exécutant cette application sur les deux intervalles considérés et sur l'intervalle suivant, elle serait terminée à la prochaine planification et apporterait donc son bénéfice.
 
 Il convient donc d'executer une application HPC si possible, même lorsque le bénéfice de celle-ci n'est pas assuré de par sa durée supérieure à celle de planification. Pour ce faire il faut dissocier trois cas possible.
 
