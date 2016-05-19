@@ -2,35 +2,56 @@
 
 #Cadre
 
-l'objectif est de faire du scheduling d'applications avec différentes dimensions
+L'objectif est de faire du placement spatio-temporel d'applications sur des serveurs en optimisant une fontion de bénéfice.
+Les applications sont réparties en deux groupes, les web service à bénéfice variable et les HPC à bénéfice acquis à terme de travail.
+Cet objectif est cepedant contrarié par des contraintes de différents types : limitations en ressources ou en énergie. En particulier, le centre est alimenté en énergie grise, son alimentation énergétique varie avec le temps.
 
 
-##Intervales
+##intervalles
 
-On prévoit une plannification sur une durée de n (typiquement 24) intervalles (typiquement d'une heure).
-Cette plannification devra être remaniée en cas d'arrivée de nouvelle application, et/ou d'arrêt de certaines applications.
+Nous considèrons une durée de n (typiquement 24) intervalles (typiquement d'une heure).
+Durant cette durée totale, l'arrivée de nouvelles applications, et/ou d'arrêt de certaines applications, peuvent invalider la plannification que nous aurons établie et donc demander une nouvelle plannification.
 
 
 ##Centre physique
 
-Le centre est constitué de plusieurs serveurs. Chaque serveur a des capacités propres en ressources (CPU, RAM). La ressource CPU étant corrélée linéairement avec la consommation énergétique, qui est le sujet de ce travail, ces deux notions sont considérées non distinctes.
+Le centre est constitué de plusieurs serveurs, chacun pouvant à priori héberger un nombre infini d'application. Chaque serveur a des capacités propres en ressources (CPU, RAM) qui vont limiter en pratique le nombre d'applications présentes sur ce serveur.
+
+<a name="centreenegie"></a>Outre les ressources des serveurs, le centre possède une notion de capacité énergétique totale. À un intervalle donné, l'utilisation en énergie de tous les serveurs du centre ne doit pas dépasser une valeur donnée.
+
+Nous considérons la ressource CPU comme corrélée linéairement avec la consommation énergétique. Ces deux notions sont considérées équivalentes pour la modélisation du problème. Cette équivalence n'a bien sûr de sens que si les architecture physiques des serveurs sont les même, on parle d'**homogénéité des serveurs** du centre.
+Étant donné que les intervalles considérés sont tous de même longueur, la notion de puissance est aussi équivalente à une multiplication près à la notion d'énergie. Nous utilisons par la suite uniquement la notion de puisance (en W).
+
+Sur ces serveurs sont placées des applications confiées par les clients.
 
 
 ##Applications
 
-Nous préférons dans cette partie le terme "application" au terme "tâche", car bien que souvent utilisé dans la litérature ce dernier appartient déjà à la émantique des contraintes de placement de type *cumulatif* que nous utilisons.
+Nous préférons dans cette partie le terme "application" au terme "tâche", car bien que souvent utilisé dans la litérature ce dernier appartient déjà à la sémantique des contraintes de placement de type *cumulatif* que nous utilisons.
 
 ###Applications Web
 
-Une application web fonctionne de manière continue et met à disposition plusieurs modes de fonctionnement, chacun consommant une valeur différente d'énergie mais assurant un bénéfice différent.
-Chaque application web peut être arrétée par son possesseur son bon vouloir. Il faut donc prévoir pour chaque application et à chaque intervale, le mode de fonctionnement de cette application ainsi que son serveur d'exécution.
+Une application web (ou Active) fonctionne de manière continue et met à disposition plusieurs modes de fonctionnement, chacun consommant une valeur différente d'énergie mais assurant un bénéfice différent.
+
+Chaque application web ne sera arrétée qu'au bon vouloir de son possesseur. Il faut donc prévoir, pour chaque application et à chaque intervalle, le mode de fonctionnement de cette application et lui réserver un serveur d'exécution, même si dans la pratique cette application pourrait être arrétée.
 
 ###Applications HPC
 
-Une application HPC propose un bénéfice, une durée (en intervales), une consommation énergétique et une échéance. Le bénéfice n'est assuré que si cette application a bien été exécutée autant de fois que le demande sa durée, avant son échéance.
-Lorsque cette application est schédulée, elle consomme des ressources (cpu, ram) du serveur qui l'héberge. Lorsque cette application n'est pas schédulée, elle est mise en veille sur un disque dur de taille infinie, sa consommation est nulle.
+Une application HPC (ou Bench) propose un bénéfice, une durée (en intervalles), une consommation énergétique et une échéance. Le bénéfice n'est assuré que si cette application a bien été exécutée autant de temps que le demande sa durée, avant son échéance.
+
+Lorsque cette application est exécutée, elle consomme des ressources (cpu, ram) du serveur qui l'héberge. Lorsque cette application n'est pas exécutée, elle est mise en veille sur un disque dur considéré comme de taille infinie, sa consommation est nulle.
 
 ##Limitations énergétiques
+
+Comme indiqué [plus haut](#centreenegie), le centre est limité en consommation totale.
+À chaque intervalle correspond une puissance maximale, et donc une énergie si on multiplie par la durée constante des intervalles.
+
+De plus, sur chaque intervalle chaque serveur est limité en puissance. Chaque application exécutée sur un serveur consomme une quantité non nulle de puissance, selon le type d'application :
+
+ - Les applications de type Web ont une valeur de puissance dépendant de leur mode de fonctionnement. 
+ - Les applications de type HPC ont une puissance fixée si exécutée sur un serveur, nulle sinon.
+ 
+Ces différents 
 
 ##Situation initiale
 
@@ -48,11 +69,42 @@ De manière périodique, ce framework tente d'approcher la consommation du centr
 
 #Implémentation
 
-L'implémentation est faite en Java, plus particulièrement avec [le solveur de contraintes Choco](https://github.com/chocoteam/choco-solver).
+L'objectif est d'une part de permettre de modéliser un tel centre, d'autre part d'obtenir une plannification de ce centre sur un nombre d'intervalles donné. La modélisation du centre étant triviale, la recherche d'une plannification est le cœur de ce problème. 
 
-## Plannification spatio-temporelle.
+L'implémentation est faite en Java, plus particulièrement avec [le solveur de contraintes Choco](https://github.com/chocoteam/choco-solver). En effet, une fois le centre actuel défini, notre implémentation utilise Choco pour définir un model formel du problème de plannification, et parcourir ce problème.
 
-Les applications web doivent êre exécutées à chaque intervale. Une première variable est, à chaque intervale, le mode d'exécution de cette application.
+Les notion de variable ou de contrainte font par la suite référence au sens de Choco.
+
+## Indices des éléments
+
+Étant donné que tout est mathématique dans Choco, il faut tout d'abord faire correspondre les éléments du centre avec des nombres. La première étape de modélisation dans Choco consiste à indexer chaque serveur, chaque application, chaque intervalle.
+
+## Placement spatio-temporelle.
+
+Les applications web doivent êre exécutées à chaque intervalle. Le problème de plannification est donc tout d'abord défini par une matrice de positions P, où Pij est le serveur qui exécute l'application j à l'intervalle i.
+
+Si l'application j est de type web, ce serveur existe forcément, si elle est de type HPC, cette application peut être mise en veille. Dans ce cas, l'indice du serveur d'exécution Pij et mis à *-1*
+
+## Mode d'éxécution des applications web
+
+Pour chaque application web, outre le serveur d'éxécution il faut choisir le mode d'excution.
+
+## Bénéfice des applications HPC
+
+variable booléenne d'exécution des HPC
+
+
+## Consommation des ressources sur un intervalle
+
+Bin-packing par intervalle pour les ressources statiques
+
+Fonction somme par intervalle pour chaque serveur pour la puissance
+
+## Limitation totale énergétique
+
+limitation par intervalle
+
+besoin d'utiliser une contrainte de type cumulatif pour accélérer la recherche
 
 ## Planification des HPC hors-plan
 
@@ -75,6 +127,12 @@ C'est cette problématique de placement des applications hors-plan que nous cons
 ### Résolution
 
 À faire.
+
+## Centre non homogène
+
+Dans le cas où le centre n'est plus homogène en CPU/énergie, c'est à dire que différents sereurs ont différentes capacité CPU ou différntes capacité énergétiques, le modèle proposé précédemment n'est plus suffisant.
+
+Il faut alors considérer deux ressources distinctes : la resource CPU statique et la ressource énergétique dynamique. 
 
 #Performances
 
