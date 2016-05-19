@@ -40,7 +40,11 @@ Le centre est dans une situation initiale dans laquelle certaines applications s
 
 ##Pika
 
-L'article [Opportunistic Scheduling in Clouds Partially Powered by Green Energy](https://hal.inria.fr/hal-01205911v1) propose un framework d'aide à la décision évènementiel. Ce framework déplace et exécute des applications afin d'améliorer le taux d'utilisation d'énergie grise dans un centre.
+L'article [Opportunistic Scheduling in Clouds Partially Powered by Green Energy]( https://hal.inria.fr/hal-01205911v1 ) propose un framework d'aide à la décision évènementiel. Ce framework déplace et exécute des applications afin d'améliorer le taux d'utilisation d'énergie grise dans un centre.
+
+De manière périodique, ce framework tente d'approcher la consommation du centre de la disponibilité en "énergie grise", variant par exemple avec l'ensoleillement des panneaux solaires.
+ - Si la consommation actuelle du centre est supérieur à cette quantité d'énergie grise, le framework tente de regrouper les VM sur un nombre réduit de serveurs.
+ - Si cette consommation est inférieure, le framework allume des serveurs et avance l'exécution de taches de type HPC.
 
 #Implémentation
 
