@@ -18,7 +18,7 @@ Le centre est constitué de plusieurs serveurs. Chaque serveur a des capacités 
 
 ##Applications
 
-Nous préférons dans cette partie le terme "application" au terme "tâche", car bien que souvent utilisé dans la litérature ce dernier est déjà utilisé dans les contraintes de placement de type cumulatif que nous utilisons.
+Nous préférons dans cette partie le terme "application" au terme "tâche", car bien que souvent utilisé dans la litérature ce dernier appartient déjà à la émantique des contraintes de placement de type *cumulatif* que nous utilisons.
 
 ###Applications Web
 
