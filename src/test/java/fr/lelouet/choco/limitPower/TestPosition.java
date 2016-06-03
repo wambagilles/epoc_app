@@ -81,12 +81,12 @@ public class TestPosition {
 
 		m.addWeb("w0", 3, 5);
 		m.addWeb("w1", 3, 6);
-		m.addWeb("w2", 3, 7);
+		m.addWeb("w2", 3, 8);
 
 		r = AppScheduler.solv(m);
 
-		Assert.assertEquals(r.profit, 34);
-		Assert.assertEquals(r.appHosters.get("w2"), Arrays.asList("s3", "s3", "s3"));
+		Assert.assertEquals(r.profit, 36);
+		Assert.assertEquals(r.appHosters.get("w2"), Arrays.asList("s3", "s3", "s3"), "" + r);
 		Assert.assertEquals(r.appHosters.get("w1"), Arrays.asList("s2", "s2", "s2"));
 		Assert.assertEquals(r.appHosters.get("w0"), Arrays.asList("s1", "s1", "s1"));
 	}

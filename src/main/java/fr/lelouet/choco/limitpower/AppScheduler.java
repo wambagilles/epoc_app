@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.chocosolver.solver.Model;
-import org.chocosolver.solver.ResolutionPolicy;
 import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.trace.IOutputFactory;
@@ -357,11 +356,11 @@ public class AppScheduler extends Model {
 			for (int i = 0; i < coefs.length; i++) {
 				coefs[i] = intVar(1);
 			}
-			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, Integer.MAX_VALUE);
-			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, Integer.MAX_VALUE);
+			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, IntVar.MAX_INT_BOUND);
+			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, IntVar.MAX_INT_BOUND);
 			IntVar[] appCost = new IntVar[index2AppName.length];
 			for (int appIdx = 0; appIdx < appCost.length; appIdx++) {
-				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, Integer.MAX_VALUE);
+				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, IntVar.MAX_INT_BOUND);
 				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]);
 			}
 			sum(appCost, "=", unScaledMigrationCost).post();
@@ -609,7 +608,7 @@ public class AppScheduler extends Model {
 
 				@Override
 				public String print() {
-					Variable[] vars = getSolver().getStrategy().getVariables();
+					Variable[] vars = getSolver().getSearch().getVariables();
 					StringBuilder s = new StringBuilder(32);
 					for (int i = 0; i < vars.length; i++) {
 						s.append(vars[i]).append(' ');
@@ -621,7 +620,7 @@ public class AppScheduler extends Model {
 			getSolver().showSolutions();
 		}
 
-		setObjective(ResolutionPolicy.MAXIMIZE, makeObjective());
+		setObjective(true, makeObjective());
 		Solution s = new Solution(this);
 		while (getSolver().solve()) {
 			s.record();
