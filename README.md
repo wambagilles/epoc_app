@@ -17,7 +17,7 @@ Durant cette durée totale, l'arrivée de nouvelles applications, et/ou d'arrêt
 
 Le centre est constitué de plusieurs serveurs, chacun pouvant à priori héberger un nombre infini d'application. Chaque serveur a des capacités propres en ressources (CPU, RAM) qui vont limiter en pratique le nombre d'applications présentes sur ce serveur.
 
-<a name="centreenegie"></a>Outre les ressources des serveurs, le centre possède une notion de capacité énergétique totale. À un intervalle donné, l'utilisation en énergie de tous les serveurs du centre ne doit pas dépasser une valeur donnée.
+Outre les ressources des serveurs, le centre possède une notion de capacité énergétique totale. À un intervalle donné, l'utilisation en énergie de tous les serveurs du centre ne doit pas dépasser une valeur donnée.
 
 Nous considérons la ressource CPU comme corrélée linéairement avec la consommation énergétique. Ces deux notions sont considérées équivalentes pour la modélisation du problème. Cette équivalence n'a bien sûr de sens que si les architecture physiques des serveurs sont les même, on parle d'**homogénéité des serveurs** du centre.
 Étant donné que les intervalles considérés sont tous de même longueur, la notion de puissance est aussi équivalente à une multiplication près à la notion d'énergie. Nous utilisons par la suite uniquement la notion de puisance (en W).
@@ -43,7 +43,7 @@ Lorsque cette application est exécutée, elle consomme des ressources (cpu, ram
 
 ##Limitations énergétiques
 
-Comme indiqué [plus haut](#centreenegie), le centre est limité en consommation totale.
+Comme indiqué plus haut, le centre est limité en consommation totale.
 À chaque intervalle correspond une puissance maximale, et donc une énergie si on multiplie par la durée constante des intervalles.
 
 De plus, sur chaque intervalle chaque serveur est limité en puissance. Chaque application exécutée sur un serveur consomme une quantité non nulle de puissance, selon le type d'application :
