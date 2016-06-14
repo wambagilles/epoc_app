@@ -356,15 +356,18 @@ public class AppScheduler extends Model {
 			for (int i = 0; i < coefs.length; i++) {
 				coefs[i] = intVar(1);
 			}
-			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, IntVar.MAX_INT_BOUND);
-			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, IntVar.MAX_INT_BOUND);
 			IntVar[] appCost = new IntVar[index2AppName.length];
+			int maxTotalCost = 0;
 			for (int appIdx = 0; appIdx < appCost.length; appIdx++) {
-				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, IntVar.MAX_INT_BOUND);
-				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]);
+				int maxCost = coefs[appIdx].getUB();
+				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, maxCost);
+				maxTotalCost += maxCost;
+				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]).post();
 			}
+			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, maxTotalCost);
 			sum(appCost, "=", unScaledMigrationCost).post();
 			// unscaled/10 = migrationcost
+			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, IntVar.MAX_INT_BOUND);
 			div(unScaledMigrationCost, intVar(model.migrationCostDiv), migrationCosts[itv]);
 		}
 	}
@@ -550,8 +553,8 @@ public class AppScheduler extends Model {
 		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
 			String appName = index2AppName[appIdx];
 			List<String> positionsl = new ArrayList<>();
-			for (int itv = 0; itv < appPositions.length; itv++) {
-				IntVar posVar = appPositions[itv][appIdx];
+			for (IntVar[] appPosition : appPositions) {
+				IntVar posVar = appPosition[appIdx];
 				int positionIdx = s.getIntVal(posVar);
 				positionsl.add(positionIdx == -1 ? null : index2ServName[positionIdx]);
 			}
@@ -610,8 +613,8 @@ public class AppScheduler extends Model {
 				public String print() {
 					Variable[] vars = getSolver().getSearch().getVariables();
 					StringBuilder s = new StringBuilder(32);
-					for (int i = 0; i < vars.length; i++) {
-						s.append(vars[i]).append(' ');
+					for (Variable var : vars) {
+						s.append(var).append(' ');
 					}
 					return s.toString();
 				}

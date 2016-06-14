@@ -17,16 +17,16 @@ import fr.lelouet.choco.limitpower.SchedulingResult;
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
  *
  */
-public class TestYunbo {
+public class TestBigProblem {
 
 	@Test
-	public void megaTestHoYeah() {
+	public void firstTest() {
 		SchedulingModel model = new SchedulingModel();
 		model.nbIntervals = 1;
 		model.setPower(1000);
 
 		// 3 classes of servers, 5 servers each.
-		IntStream.rangeClosed(0, 10).forEach(i -> {
+		IntStream.rangeClosed(0, 5).forEach(i -> {
 			model.server("sa" + i).maxPower = 40;
 			model.server("sb" + i).maxPower = 30;
 			model.server("sc" + i).maxPower = 20;
@@ -61,7 +61,11 @@ public class TestYunbo {
 		};
 
 		model.setResource("RAM", ram);
-		SchedulingResult r = AppScheduler.solv(model);
+		AppScheduler as = new AppScheduler();
+		// as.withDebug(true);
+
+		SchedulingResult r = as.solve(model);
+
 		Assert.assertNotNull(r);
 		System.err.println(r);
 	}
