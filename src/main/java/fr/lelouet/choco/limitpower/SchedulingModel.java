@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.ToIntFunction;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import fr.lelouet.choco.limitpower.model.HPC;
@@ -15,10 +16,8 @@ import fr.lelouet.choco.limitpower.model.PowerMode;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
-
 /**
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
- *
  */
 public class SchedulingModel {
 
@@ -32,8 +31,7 @@ public class SchedulingModel {
 		/** objective is to maximize profit, THEN to maximize the power use */
 		PROFIT_POWER,
 		/**
-		 * objecive is to maximize profit, THEN to maximize number of subtasks on
-		 * schedule
+		 * objecive is to maximize profit, THEN to maximize number of subtasks on schedule
 		 */
 		PROFIT_ONSCHEDULE
 	}
@@ -65,7 +63,7 @@ public class SchedulingModel {
 
 	/**
 	 * get the power specified at slot idx
-	 * 
+	 *
 	 * @param idx
 	 *          the slot to consider
 	 * @return the value of power associated to this slot, or -1 if not present
@@ -136,7 +134,6 @@ public class SchedulingModel {
 	 * reference to a web app inside the model
 	 *
 	 * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
-	 *
 	 */
 	public class NamedWeb {
 
@@ -177,23 +174,24 @@ public class SchedulingModel {
 		addHPC(name, new HPC(start, duration, power, benefit, deadline));
 	}
 
+	public Stream<String> appNames() {
+		return Stream.concat(hpcs.keySet().stream(), webs.keySet().stream());
+	}
+
 	//
 	// tools
 	//
 	/**
-	 *
 	 * @return the sum of the maximum profit of all applications
 	 */
 	public int getMaxProfit() {
-		return hpcs.values().stream().mapToInt(h -> h.profit).sum()
-				+ nbIntervals
+		return hpcs.values().stream().mapToInt(h -> h.profit).sum() + nbIntervals
 				* webs.values().stream().mapToInt(l -> l.stream().mapToInt(pm -> pm.profit).max().getAsInt()).sum();
 	}
 
 	@Override
 	public String toString() {
-		return "Model(intervals=" + nbIntervals + " obj=" + objective + ")" + hpcs + webs
-				+ powerlimits;
+		return "Model(intervals=" + nbIntervals + " obj=" + objective + ")" + hpcs + webs + powerlimits;
 	}
 
 	/////////////////////////
@@ -214,8 +212,7 @@ public class SchedulingModel {
 	protected LinkedHashMap<String, Server> serversByName = new LinkedHashMap<>();
 
 	/**
-	 * add a server with a given name, or return the one already present if
-	 * exists.
+	 * add a server with a given name, or return the one already present if exists.
 	 */
 	public Server server(String name) {
 		Server ret = serversByName.get(name);
@@ -279,4 +276,30 @@ public class SchedulingModel {
 	}
 
 	public final Previous previous = new Previous();
+
+	public double getLoad(String resName) {
+		ToIntFunction<String> res = resources.get(resName);
+		if (res == null) {
+			return 0;
+		}
+		return appNames().mapToDouble(res::applyAsInt).sum()
+				/ serversByName.keySet().stream().mapToDouble(res::applyAsInt).sum();
+	}
+
+	public double getMinPwrLoad() {
+		return (webs.values().stream().mapToDouble(l -> l.stream().mapToDouble(p -> p.power).min().getAsDouble()).sum()
+				+ hpcs.values().stream().mapToDouble(h -> h.power).sum())
+				/ serversByName.values().stream().mapToDouble(s -> s.maxPower).sum();
+	}
+
+	public double getMaxPwrLoad() {
+		return (webs.values().stream().mapToDouble(l -> l.stream().mapToDouble(p -> p.power).max().getAsDouble()).sum()
+				+ hpcs.values().stream().mapToDouble(h -> h.power).sum())
+				/ serversByName.values().stream().mapToDouble(s -> s.maxPower).sum();
+	}
+
+	public IntStream streamMaxPwr() {
+		return IntStream.concat(webs.values().stream().mapToInt(l -> l.stream().mapToInt(p -> p.power).max().getAsInt()),
+				hpcs.values().stream().mapToInt(h -> h.power));
+	}
 }
