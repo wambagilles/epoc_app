@@ -17,7 +17,6 @@ public class TestRAM {
 	public void testScheduling() {
 		SchedulingModel m = new SchedulingModel();
 		m.nbIntervals = 1;
-		m.setPower(18);
 
 		m.addWeb("w0", 1, 2);
 		m.addWeb("w0", 2, 3);

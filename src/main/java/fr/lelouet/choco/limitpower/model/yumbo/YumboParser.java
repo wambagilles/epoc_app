@@ -43,7 +43,8 @@ public class YumboParser {
 		SchedulingModel ret = new SchedulingModel();
 		ret.nbIntervals = 1;
 		TObjectIntHashMap<String> ram = new TObjectIntHashMap<>();
-		int totalram = 0, totalpower = 0;
+// int totalram = 0;
+// int totalpower = 0;
 		ret.setResource("ram", ram::get);
 		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
 			String line;
@@ -52,9 +53,9 @@ public class YumboParser {
 				if (words.length == 3) {
 					String name = "vm_" + words[0];
 					int power = (int) (10000 * Double.parseDouble(words[1]));
-					totalpower += power;
+// totalpower += power;
 					int ramuse = (int) (10000 * Double.parseDouble(words[2]));
-					totalram += ramuse;
+// totalram += ramuse;
 					ret.addWeb(name, power, 0);
 					ram.put(name, ramuse);
 				}
@@ -62,19 +63,19 @@ public class YumboParser {
 		} catch (IOException e) {
 			throw new UnsupportedOperationException("wtf ?", e);
 		}
-		ret.setPower(totalpower);
-		int serverRam = totalram * 100 / ramLoad;
-		int serverPwr = totalpower * 100 / pwrLoad;
-		for (int si = 0; si < nbServers; si++) {
-			String name = "s_" + si;
-			ret.server(name).maxPower = serverPwr;
-			ram.put(name, serverRam);
-		}
+// ret.setPower(totalpower);
+// int serverRam = totalram * 100 / ramLoad;
+// int serverPwr = totalpower * 100 / pwrLoad;
+// for (int si = 0; si < nbServers; si++) {
+// String name = "s_" + si;
+// ret.server(name).maxPower = serverPwr;
+// ram.put(name, serverRam);
+// }
 		return ret;
 	}
 
 	public static void main(String[] args) {
-		SchedulingModel model = load(2, 5, 10, 20);
+		SchedulingModel model = YumboParser.load(2, 5, 10, 20);
 		SchedulingResult res = new AppScheduler().solve(model);
 		System.err.println("" + res);
 	}

@@ -23,7 +23,6 @@ public class TestBigProblem {
 	public void firstTest() {
 		SchedulingModel model = new SchedulingModel();
 		model.nbIntervals = 1;
-		model.setPower(1000);
 
 		// 3 classes of servers, 5 servers each.
 		IntStream.rangeClosed(0, 5).forEach(i -> {

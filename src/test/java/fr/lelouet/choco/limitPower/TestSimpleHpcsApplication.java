@@ -1,12 +1,12 @@
 package fr.lelouet.choco.limitPower;
 
-import static fr.lelouet.choco.limitpower.AppScheduler.solv;
-
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
+import fr.lelouet.choco.limitpower.SchedulingModel.Server;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.model.HPC;
 
@@ -14,11 +14,12 @@ public class TestSimpleHpcsApplication {
 
 	SchedulingResult r;
 	SchedulingModel m;
+	Server server;
 
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
-		m.server("server").maxPower = 1000;
+		server = m.server("server");
 	}
 
 	@Test
@@ -28,9 +29,9 @@ public class TestSimpleHpcsApplication {
 		m.addHPC("a", h);
 
 		// the HPC task fits perfectly in the 1-duration, 1-power intervals
-		m.setPower(1);
+		server.maxPower = 1;
 		m.nbIntervals = 1;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
 	}
@@ -42,22 +43,22 @@ public class TestSimpleHpcsApplication {
 		m.addHPC("a", h);
 
 		// the HPC task fits perfectly in the 2-duration, 2-power intervals
-		m.setPower(2);
+		server.maxPower = 2;
 		m.nbIntervals = 2;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
 
 		// not enough power : profit is 0
-		m.setPower(1);
-		r = solv(m);
+		server.maxPower = 1;
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 
 		// not enough intervals : profit is 0
-		m.setPower(2);
+		server.maxPower = 2;
 		m.nbIntervals = 1;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 	}
@@ -70,23 +71,23 @@ public class TestSimpleHpcsApplication {
 		m.addHPC("c", b);
 
 		// enough power * duration to fit both at the same time
-		m.setPower(4);
+		server.maxPower = 4;
 		m.nbIntervals = 2;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3, "" + r);
 
 		// enough power * duration to fit both sequentially
-		m.setPower(2);
+		server.maxPower = 2;
 		m.nbIntervals = 4;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3, "" + r);
 
 		// enough power * duration to fit one sequentially
-		m.setPower(2);
+		server.maxPower = 2;
 		m.nbIntervals = 2;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 2, "" + r);
 

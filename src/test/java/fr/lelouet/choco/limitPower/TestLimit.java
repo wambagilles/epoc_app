@@ -1,13 +1,12 @@
 package fr.lelouet.choco.limitPower;
 
-import static fr.lelouet.choco.limitpower.AppScheduler.solv;
-
 import java.util.Arrays;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 
@@ -31,13 +30,12 @@ public class TestLimit {
 	@Test
 	public void testLimit() {
 		m.addHPC("a", 0, 1, 2, 1, -1);
-		m.setPower(2);
 		m.nbIntervals = 2;
 
 		// we limit the power by two on both intervals : the hpc can't be scheduled
 		m.setPower(0, 0);
 		m.setPower(1, 0);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 0, "" + r);
 
@@ -45,7 +43,7 @@ public class TestLimit {
 		// second interval
 		m.setPower(0, 1);
 		m.setPower(1, 2);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
 		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer(1)));
@@ -54,7 +52,7 @@ public class TestLimit {
 		// interval
 		m.setPower(0, 2);
 		m.setPower(1, 1);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 1, "" + r);
 		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer(0)));

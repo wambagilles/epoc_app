@@ -18,7 +18,6 @@ public class TestPosition {
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
-		m.setPower(25000);
 		m.server("s1").maxPower = 1000;
 	}
 
@@ -39,7 +38,6 @@ public class TestPosition {
 	// one reduction by 1 power at the 2d interval (itv 1)
 	public void testScheduling2apps() {
 		m.nbIntervals = 3;
-		m.setPower(3);
 		m.setPower(1, 2);
 		m.addHPC("hpc", 0, 2, 1, 4, -1);
 		m.addWeb("web", 1, 1);
@@ -64,31 +62,38 @@ public class TestPosition {
 	 */
 	@Test
 	public void moreComplexWebProblem() {
-		m.nbIntervals=3;
-		m.server("s1").maxPower = 1;
-		m.server("s2").maxPower = 2;
-		m.server("s3").maxPower = 3;
-		m.setPower(6);
-		m.setPower(1, 5);
+
+		// 2 intervals, 2 servers
+		m.nbIntervals = 2;
+		m.server("s0").maxPower = 1;
+		m.server("s1").maxPower = 2;
+		m.setPower(1, 2);
 
 		m.addWeb("w0", 1, 1);
-		m.addWeb("w1", 1, 1);
-		m.addWeb("w2", 1, 1);
-
 		m.addWeb("w0", 2, 3);
-		m.addWeb("w1", 2, 4);
-		m.addWeb("w2", 2, 5);
-
 		m.addWeb("w0", 3, 5);
+
+		m.addWeb("w1", 1, 1);
+		m.addWeb("w1", 2, 4);
 		m.addWeb("w1", 3, 6);
+
+		r = new AppScheduler().solve(m);
+		Assert.assertEquals(r.profit, 7);
+		Assert.assertEquals(r.appHosters.get("w1"), Arrays.asList("s1", "s1"), "" + r);
+		Assert.assertEquals(r.appHosters.get("w0"), Arrays.asList("s0", "s0"), "" + r);
+
+		// then with 3 intervals and 3 servers
+		m.nbIntervals = 3;
+		m.server("s2").maxPower = 3;
+		m.addWeb("w2", 1, 1);
+		m.addWeb("w2", 2, 5);
 		m.addWeb("w2", 3, 8);
-
-		r = AppScheduler.solv(m);
-
+		m.setPower(1, 5);
+		r = new AppScheduler().solve(m);
 		Assert.assertEquals(r.profit, 36);
-		Assert.assertEquals(r.appHosters.get("w2"), Arrays.asList("s3", "s3", "s3"), "" + r);
-		Assert.assertEquals(r.appHosters.get("w1"), Arrays.asList("s2", "s2", "s2"));
-		Assert.assertEquals(r.appHosters.get("w0"), Arrays.asList("s1", "s1", "s1"));
+		Assert.assertEquals(r.appHosters.get("w2"), Arrays.asList("s2", "s2", "s2"), "" + r);
+		Assert.assertEquals(r.appHosters.get("w1"), Arrays.asList("s1", "s1", "s1"), "" + r);
+		Assert.assertEquals(r.appHosters.get("w0"), Arrays.asList("s0", "s0", "s0"), "" + r);
 	}
 
 }

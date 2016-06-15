@@ -74,10 +74,6 @@ public class GroovyParser {
 		public void putAt(int idx, int power) {
 			model.setPower(idx, power);
 		}
-
-		public void leftShift(int power) {
-			model.setPower(power);
-		}
 	}
 
 	public static void main(String[] args) throws FileNotFoundException {

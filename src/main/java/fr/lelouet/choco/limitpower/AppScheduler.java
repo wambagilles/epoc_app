@@ -45,6 +45,7 @@ import gnu.trove.map.hash.TObjectIntHashMap;
  */
 public class AppScheduler extends Model {
 
+	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppScheduler.class);
 
 	protected SchedulingModel model = new SchedulingModel();
@@ -280,6 +281,8 @@ public class AppScheduler extends Model {
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////
+
 	/**
 	 * positions[i][j] is the position at interval i of the application j . if it is -1 (for an hpc app) then the
 	 * application is not run at interval i.
@@ -364,35 +367,17 @@ public class AppScheduler extends Model {
 				maxTotalCost += maxCost;
 				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]).post();
 			}
-			IntVar unScaledMigrationCost = intVar("migrationCostUnscaled_" + itv, 0, maxTotalCost);
-			sum(appCost, "=", unScaledMigrationCost).post();
-			// unscaled/10 = migrationcost
-			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, IntVar.MAX_INT_BOUND);
-			div(unScaledMigrationCost, intVar(model.migrationCostDiv), migrationCosts[itv]);
+			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, maxTotalCost);
+			sum(appCost, "=", migrationCosts[itv]).post();
 		}
 	}
+
+	////////////////////////////////////////////////////////////////////////////
 
 	//
 	// reduction tasks to reduce effective power at a given time
 	//
-
-	protected Task reductionTask(int index) {
-		return new Task(fixed(index), fixed(1), fixed(index + 1));
-	}
-
-	/**
-	 * add fake tasks that reduce the total power available on each interval
-	 */
-	protected void makeReductionTasks() {
-		if (model.getMaxPower() == 0) {
-			AppScheduler.logger.warn("you have not set the max power.");
-		}
-		for (int i = 0; i < model.nbIntervals; i++) {
-			int limit = model.getPower(i);
-			addTask(reductionTask(i),
-					limit == model.maxPower ? migrationCosts[i] : intOffsetView(migrationCosts[i], model.maxPower - limit));
-		}
-	}
+	int maxPower = 0;
 
 	/**
 	 * powers[i][j] is the power used at interval i by application j
@@ -412,6 +397,7 @@ public class AppScheduler extends Model {
 	 * power if one is scheduled.
 	 */
 	protected void makeAppPowers() {
+		maxPower = model.serversByName.values().stream().mapToInt(s -> s.maxPower).sum();
 		appPowers = new IntVar[model.nbIntervals][];
 		for (int i = 0; i < appPowers.length; i++) {
 			appPowers[i] = new IntVar[index2AppName.length];
@@ -449,9 +435,22 @@ public class AppScheduler extends Model {
 					times(execution, appPowers[itv][appIdx], power).post();
 				}
 				IntVar servPower = intVar("servpower_" + itv + "_" + servIdx, 0, maxpower);
-				servPowers[itv][servIdx]=servPower;
+				servPowers[itv][servIdx] = servPower;
 				sum(powerOnServers, "=", servPower).post();
 			}
+		}
+	}
+
+	/**
+	 * add fake tasks that reduce the total power available on each interval
+	 */
+	protected void makeReductionTasks() {
+		for (int i = 0; i < model.nbIntervals; i++) {
+			int limit = model.getPower(i);
+			// if we have a limit, we must reduce the power a this interval. anyhow, we also must consider the cost of
+			// migrating the vms
+			addTask(new Task(fixed(i), fixed(1), fixed(i + 1)),
+					limit != -1 && limit < maxPower ? intOffsetView(migrationCosts[i], maxPower - limit) : migrationCosts[i]);
 		}
 	}
 
@@ -465,7 +464,7 @@ public class AppScheduler extends Model {
 		post(sum(allProfits.toArray(new IntVar[] {}), "=", totalProfit));
 		Task[] tasks = allTasks.toArray(new Task[] {});
 		IntVar[] heights = allPowers.toArray(new IntVar[] {});
-		post(cumulative(tasks, heights, fixed(model.maxPower)));
+		post(cumulative(tasks, heights, fixed(maxPower)));
 	}
 
 	//
@@ -515,7 +514,7 @@ public class AppScheduler extends Model {
 		case PROFIT_POWER:
 			// obj = profit*maxpower*duration + sum(hpcsubtask.power)
 			return makeSubtaskSum("profit_power", HPCSubTask::getPower,
-					intScaleView(totalProfit, model.maxPower * model.nbIntervals));
+					intScaleView(totalProfit, maxPower * model.nbIntervals));
 		case PROFIT_ONSCHEDULE:
 			// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
 			return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,

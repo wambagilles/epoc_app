@@ -1,13 +1,12 @@
 package fr.lelouet.choco.limitPower;
 
-import static fr.lelouet.choco.limitpower.AppScheduler.solv;
-
 import java.util.Arrays;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 import fr.lelouet.choco.limitpower.SchedulingResult;
@@ -37,10 +36,10 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testOneAppOneInterval() {
-		m.setPower(1);
+		m.setPower(0, 1);
 		m.nbIntervals = 1;
 		m.addHPC("a", 0, 2, 1, 1, 10);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 0 }), "result is " + r);
 	}
 
@@ -51,10 +50,11 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testOneAppTwoInterval() {
-		m.setPower(1);
+		m.setPower(0, 1);
+		m.setPower(1, 1);
 		m.nbIntervals = 2;
 		m.addHPC("a", 0, 3, 1, 1, 10);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertEquals(r.hpcStarts.get("a"), Arrays.asList(new Integer[] { 0, 1 }), "result is " + r);
 	}
 
@@ -65,11 +65,11 @@ public class TestObjectivePower {
 	 */
 	@Test
 	public void testTwoApps() {
-		m.setPower(3);
+		m.getServer("server").maxPower = 3;
 		m.nbIntervals = 3;
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		m.addHPC("b", 0, 2, 3, 3, 10);
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertEquals(r.hpcStarts.get("a").size(), 1, "result is " + r);
 		Assert.assertEquals(r.hpcStarts.get("b").size(), 2, "result is " + r);
 	}

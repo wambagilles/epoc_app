@@ -1,13 +1,12 @@
 package fr.lelouet.choco.limitPower;
 
-import static fr.lelouet.choco.limitpower.AppScheduler.solv;
-
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
+import fr.lelouet.choco.limitpower.SchedulingModel.Server;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 
 public class TestSimpleWebApplication {
@@ -15,28 +14,29 @@ public class TestSimpleWebApplication {
 	AppScheduler s;
 	SchedulingResult r;
 	SchedulingModel m;
+	Server server;
 
 	@BeforeMethod
 	public void cleanup() {
 		m = new SchedulingModel();
-		m.server("server").maxPower = 1000;
+		server = m.server("server");
 	}
 
 	@Test
 	public void testOnePassingWeb() {
 		m.nameWeb("a").add(1, 1).add(5, 3);
 
-		m.setPower(2);
+		server.maxPower = 2;
 		m.nbIntervals = 1;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.webModes.get("a").get(0).power, 1);
 		Assert.assertEquals(r.profit, 1);
 
 		// now we allow 5 power use, so we can have a profit of 3
-		m.setPower(5);
+		server.maxPower = 5;
 		m.nbIntervals = 1;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.webModes.get("a").get(0).power, 5);
 		Assert.assertEquals(r.profit, 3);
@@ -51,24 +51,24 @@ public class TestSimpleWebApplication {
 		m.nameWeb("a").add(1, 1).add(5, 2).add(17, 6);
 		m.nameWeb("b").add(2, 1).add(6, 2).add(18, 6);
 
-		m.setPower(3);
+		server.maxPower = 3;
 		m.nbIntervals = 1;
-		r = solv(m);
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 2);
 
-		m.setPower(7);
-		r = solv(m);
+		server.maxPower = 7;
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 3);
 
-		m.setPower(11);
-		r = solv(m);
+		server.maxPower = 11;
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 4);
 
-		m.setPower(40);
-		r = solv(m);
+		server.maxPower = 40;
+		r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);
 		Assert.assertEquals(r.profit, 12);
 	}

@@ -42,19 +42,6 @@ public class SchedulingModel {
 
 	public int nbIntervals = 6;
 
-	protected int maxPower = 0;
-
-	protected int migrationCostDiv = 10;
-
-	public void setPower(int power) {
-		maxPower = power;
-		powerlimits.clear();
-	}
-
-	public int getMaxPower() {
-		return maxPower;
-	}
-
 	protected TIntIntHashMap powerlimits = new TIntIntHashMap();
 
 	/**
@@ -66,18 +53,25 @@ public class SchedulingModel {
 	 *          the maximum power at this interval. must be &lt; maxpower
 	 */
 	public void setPower(int interval, int power) {
-		if (power >= maxPower) {
-			if (maxPower == 0) {
-				maxPower=power;
-			}
+		if (interval < 0) {
+			return;
+		}
+		if (power < 0) {
 			powerlimits.remove(interval);
 		} else {
 			powerlimits.put(interval, power);
 		}
 	}
 
+	/**
+	 * get the power specified at slot idx
+	 * 
+	 * @param idx
+	 *          the slot to consider
+	 * @return the value of power associated to this slot, or -1 if not present
+	 */
 	public int getPower(int idx) {
-		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : maxPower;
+		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : -1;
 	}
 
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
@@ -198,7 +192,7 @@ public class SchedulingModel {
 
 	@Override
 	public String toString() {
-		return "Model(total power=" + maxPower + " intervals=" + nbIntervals + " obj=" + objective + ")" + hpcs + webs
+		return "Model(intervals=" + nbIntervals + " obj=" + objective + ")" + hpcs + webs
 				+ powerlimits;
 	}
 
