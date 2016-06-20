@@ -178,6 +178,10 @@ public class SchedulingModel {
 		return Stream.concat(hpcs.keySet().stream(), webs.keySet().stream());
 	}
 
+	public int nbApps() {
+		return hpcs.size() + webs.size();
+	}
+
 	//
 	// tools
 	//
@@ -247,6 +251,10 @@ public class SchedulingModel {
 
 	public Stream<Entry<String, ToIntFunction<String>>> resources() {
 		return resources.entrySet().stream();
+	}
+
+	public ToIntFunction<String> getResource(String name) {
+		return resources.get(name);
 	}
 
 	///////////////////

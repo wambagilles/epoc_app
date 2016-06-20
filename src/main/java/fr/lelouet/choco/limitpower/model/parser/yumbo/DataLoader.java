@@ -17,23 +17,13 @@ import gnu.trove.map.hash.TObjectIntHashMap;
  */
 public class DataLoader {
 
-	/**
-	 * generates a model according to traces. Since the traces contain VM ram and CPU load, we multiply those load by
-	 * 10000 to have a base value. In order to host those VMs, we also create servers.
-	 *
-	 * @param filenumber
-	 *          the number of the file to load traces from
-	 * @return a new model or null if an issue is encoutered during parsing/creation/whatever.
-	 */
-	public SchedulingModel load(int filenumber) {
-		String location = "./resources/traces/" + filenumber + ".csv";
-		File f = new File(location);
+	public SchedulingModel loadRaw(String filename, TObjectIntHashMap<String> ram) {
+		File f = new File(filename);
 		if (!f.exists()) {
 			return null;
 		}
 		SchedulingModel ret = new SchedulingModel();
 		ret.nbIntervals = 1;
-		TObjectIntHashMap<String> ram = new TObjectIntHashMap<>();
 		ret.setResource("ram", ram::get);
 		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
 			String line;
@@ -50,7 +40,24 @@ public class DataLoader {
 		} catch (IOException e) {
 			throw new UnsupportedOperationException("wtf ?", e);
 		}
-		for (int i = 0; i < 1; i++) {
+		return ret;
+	}
+
+	/**
+	 * generates a model according to traces. Since the traces contain VM ram and
+	 * CPU load, we multiply those load by 10000 to have a base value. In order to
+	 * host those VMs, we also create servers.
+	 *
+	 * @param filenumber
+	 *          the number of the file to load traces from
+	 * @return a new model or null if an issue is encoutered during
+	 *         parsing/creation/whatever.
+	 */
+	public SchedulingModel load(int filenumber) {
+		String location = "./resources/traces/" + filenumber + ".csv";
+		TObjectIntHashMap<String> ram = new TObjectIntHashMap<>();
+		SchedulingModel ret = loadRaw(location, ram);
+		for (int i = 0; i < 120; i++) {
 			ret.server("s_" + i).maxPower = 10000;
 			ram.put("s_" + i, 10000);
 		}
@@ -62,9 +69,31 @@ public class DataLoader {
 				.toArray(new SchedulingModel[] {});
 	}
 
+	public SchedulingModel[] loadRawAll() {
+		return IntStream.rangeClosed(0, 23)
+				.mapToObj(i -> loadRaw("./resources/traces/" + i + ".csv", new TObjectIntHashMap<>()))
+				.collect(Collectors.toList()).toArray(new SchedulingModel[] {});
+	}
+
 	public static void main(String[] args) {
-		DataLoader loader = new DataLoader();
-		SchedulingModel[] models = loader.loadAll();
+		SchedulingModel[] models = new DataLoader().loadRawAll();
+		for (int vi = 0; vi < models[0].nbApps(); vi++) {
+			String vname = "vm_" + vi;
+			System.err.print(vname);
+			int min = Integer.MAX_VALUE;
+			int max = 0;
+			for (SchedulingModel m : models) {
+				int power = m.getWebPowerModes(vname).get(0).power;
+				min = Math.min(min, power);
+				max = Math.max(max, power);
+				System.err.print("\t" + power);
+			}
+			System.err.println("\tstats\t" + min + "\t" + max + "\t" + 1.0 * max / min);
+		}
+	}
+
+	public static void main2(String[] args) {
+		SchedulingModel[] models = new DataLoader().loadAll();
 		System.err.println("itv\t#ram\t#pwr\tavgPWR\t#app\t#<.1%\t#<1%\t#<10%");
 		for (int i = 0; i < models.length; i++) {
 			SchedulingModel m = models[i];
