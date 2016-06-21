@@ -230,6 +230,8 @@ public class AppScheduler extends Model {
 					BoolVar isOrdered = boolVar(subTaskName + "_ordered");
 					orderedCstr.reifyWith(isOrdered);
 					arithm(onSchedule, "<=", isOrdered).post();
+				} else {
+					arithm(intVar(h.start), "<=", start).post();
 				}
 				HPCSubTask t = new HPCSubTask(h, start, end, power, onSchedule);
 				subtasksList.add(t);

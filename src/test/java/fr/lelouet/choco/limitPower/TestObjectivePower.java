@@ -8,8 +8,8 @@ import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingModel;
-import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 
 /**
  * test the solver with objective being profit+power use

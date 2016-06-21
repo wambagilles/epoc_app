@@ -72,6 +72,8 @@ public class SchedulingModel {
 		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : -1;
 	}
 
+	// web apps
+
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
 
 	/**
@@ -156,6 +158,16 @@ public class SchedulingModel {
 		return new NamedWeb(name);
 	}
 
+	public Stream<String> webNames() {
+		return webs.keySet().stream();
+	}
+
+	public int nbWebs() {
+		return webs.size();
+	}
+
+	// HPC apps
+
 	protected LinkedHashMap<String, HPC> hpcs = new LinkedHashMap<>();
 
 	public HPC getHPC(String name) {
@@ -174,8 +186,18 @@ public class SchedulingModel {
 		addHPC(name, new HPC(start, duration, power, benefit, deadline));
 	}
 
+	public Stream<String> hpcNames() {
+		return hpcs.keySet().stream();
+	}
+
+	public int nbHPCs() {
+		return hpcs.size();
+	}
+
+	// all apps
+
 	public Stream<String> appNames() {
-		return Stream.concat(hpcs.keySet().stream(), webs.keySet().stream());
+		return Stream.concat(hpcNames(), webNames());
 	}
 
 	public int nbApps() {
