@@ -102,14 +102,14 @@ public class AppScheduler extends Model {
 	// web tasks
 	//
 
-	protected class WebSubClass extends Task {
+	public class WebSubClass extends Task {
 
-		String name;
+		public final String name;
 
-		int[] profits;
-		int[] powers;
+		public final int[] profits;
+		public final int[] powers;
 
-		IntVar mode, power, profit;
+		public final IntVar mode, power, profit;
 
 		WebSubClass(String name, int start, int[] profits, int[] powers) {
 			super(fixed(start), fixed(1), fixed(start + 1));
@@ -133,7 +133,7 @@ public class AppScheduler extends Model {
 	/**
 	 * for each web application, its modes
 	 */
-	protected Map<String, List<WebSubClass>> webModes = new HashMap<>();
+	public Map<String, List<WebSubClass>> webModes = new HashMap<>();
 
 	/** make one task corresponding to the web apps */
 	protected void makeWebTasks() {
@@ -253,6 +253,9 @@ public class AppScheduler extends Model {
 		}
 	}
 
+	//////////////////////////////////////////////////////////////////////////
+	// identification of tasks by their index
+
 	/////
 	// name<->idx for apps
 	////
@@ -281,6 +284,28 @@ public class AppScheduler extends Model {
 		for (int i = 0; i < index2ServName.length; i++) {
 			servName2Index.put(index2ServName[i], i);
 		}
+	}
+
+	public int app(String appName) {
+		return appName2Index.get(appName);
+	}
+
+	public String app(int appIdx) {
+		if (appIdx < 0 || appIdx >= index2AppName.length) {
+			return null;
+		}
+		return index2AppName[appIdx];
+	}
+
+	public int serv(String servName) {
+		return servName2Index.get(servName);
+	}
+
+	public String serv(int servIdx) {
+		if (servIdx < 0 || servIdx >= index2ServName.length) {
+			return null;
+		}
+		return index2ServName[servIdx];
 	}
 
 	//////////////////////////////////////////////////////////////////////
@@ -526,6 +551,11 @@ public class AppScheduler extends Model {
 		}
 	}
 
+	// make the heuristics for searching a solution
+
+	protected void makeHeuristics() {
+	}
+
 	//
 	// extract data to a result
 	//
@@ -625,6 +655,7 @@ public class AppScheduler extends Model {
 		}
 
 		setObjective(true, makeObjective());
+		makeHeuristics();
 		Solution s = new Solution(this);
 		while (getSolver().solve()) {
 			s.record();
