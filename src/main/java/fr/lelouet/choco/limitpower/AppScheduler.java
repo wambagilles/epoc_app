@@ -27,6 +27,7 @@ import org.chocosolver.util.ESat;
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -584,9 +585,12 @@ public class AppScheduler extends Model {
 		return this;
 	}
 
+	/** from one objective, we generate several function, each creating an heuristic on a AppScheduler. */
+	protected Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> heuristicsStrategy = null;
+
 	// list the heuristics makers
 	protected Function<AppScheduler, AbstractStrategy<?>>[] makeHeuristics() {
-		return null;
+		return heuristicsStrategy != null ? heuristicsStrategy.apply(source.objective) : null;
 	}
 
 	//
