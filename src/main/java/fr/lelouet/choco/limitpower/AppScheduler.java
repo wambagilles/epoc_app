@@ -12,8 +12,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.chocosolver.solver.Model;
+import org.chocosolver.solver.ParallelPortfolio;
 import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.constraints.Constraint;
+import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
 import org.chocosolver.solver.trace.IOutputFactory;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
@@ -553,7 +555,9 @@ public class AppScheduler extends Model {
 
 	// make the heuristics for searching a solution
 
-	protected void makeHeuristics() {
+	protected AbstractStrategy[] makeHeuristics() {
+
+		return null;
 	}
 
 	//
@@ -653,14 +657,25 @@ public class AppScheduler extends Model {
 			getSolver().showContradiction();
 			getSolver().showSolutions();
 		}
-
-		setObjective(true, makeObjective());
-		makeHeuristics();
+		IntVar obj = makeObjective();
+		setObjective(true, obj);
+		AbstractStrategy<?>[] heuristics = makeHeuristics();
 		Solution s = new Solution(this);
-		while (getSolver().solve()) {
-			s.record();
+		if (heuristics == null || heuristics.length <= 1) {
+			if (heuristics != null) {
+				getSolver().setSearch(heuristics);
+			}
+			while (getSolver().solve()) {
+				s.record();
+			}
+			return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
+		} else {
+			ParallelPortfolio pares = new ParallelPortfolio();
+			for (AbstractStrategy<?> as : heuristics) {
+				pares.addModel(cl);
+			}
+			return null;
 		}
-		return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
 	}
 
 	public static int maxIntArray(int... vals) {
