@@ -7,8 +7,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 
 /**
  * test the limit of power on some intervals
@@ -19,11 +19,11 @@ import fr.lelouet.choco.limitpower.SchedulingResult;
 public class TestLimit {
 
 	SchedulingResult r;
-	SchedulingModel m;
+	SchedulingProblem m;
 
 	@BeforeMethod
 	public void cleanup() {
-		m = new SchedulingModel();
+		m = new SchedulingProblem();
 		m.server("server").maxPower = 1000;
 	}
 

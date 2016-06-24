@@ -26,6 +26,7 @@ import org.chocosolver.util.ESat;
 
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -50,10 +51,10 @@ public class AppScheduler extends Model {
 	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AppScheduler.class);
 
-	protected SchedulingModel model = new SchedulingModel();
+	protected SchedulingProblem source = new SchedulingProblem();
 
-	public SchedulingModel getModel() {
-		return model;
+	public SchedulingProblem getSource() {
+		return source;
 	}
 
 	protected boolean debug = false;
@@ -74,6 +75,154 @@ public class AppScheduler extends Model {
 	protected IntVar bounded(String name, int min, int max) {
 		return intVar(name, min, max, true);
 	}
+
+	//////////////////////////////////////////////////////////////////////////
+	// identification of tasks by their index
+
+	/////
+	// name<->idx for apps
+	////
+
+	protected TObjectIntMap<String> appName2Index = new TObjectIntHashMap<>(10, 0.5f, -1);
+	protected String[] index2AppName = null;
+
+	////
+	// name<->idx for servers
+	////
+
+	protected TObjectIntMap<String> servName2Index = new TObjectIntHashMap<>();
+	protected String[] index2ServName = null;
+
+	/**
+	 * fill data in {@link #servName2Index}, {@link #index2ServName}, {@link #appName2Index}, {@link #index2AppName}
+	 */
+	protected void affectIndexes() {
+		List<String> appnames = source.appNames().collect(Collectors.toList());
+		index2AppName = appnames.toArray(new String[] {});
+		for (int i = 0; i < index2AppName.length; i++) {
+			appName2Index.put(index2AppName[i], i);
+		}
+		index2ServName = source.servNames().collect(Collectors.toList()).toArray(new String[] {});
+		for (int i = 0; i < index2ServName.length; i++) {
+			servName2Index.put(index2ServName[i], i);
+		}
+	}
+
+	public int app(String appName) {
+		return appName2Index.get(appName);
+	}
+
+	public String app(int appIdx) {
+		if (appIdx < 0 || appIdx >= index2AppName.length) {
+			return null;
+		}
+		return index2AppName[appIdx];
+	}
+
+	public int serv(String servName) {
+		return servName2Index.get(servName);
+	}
+
+	public String serv(int servIdx) {
+		if (servIdx < 0 || servIdx >= index2ServName.length) {
+			return null;
+		}
+		return index2ServName[servIdx];
+	}
+
+	//////////////////////////////////////////////////////////////////////
+
+	/**
+	 * positions[i][j] is the position at interval i of the application j . if it is -1 (for an hpc app) then the
+	 * application is not run at interval i.
+	 */
+	protected IntVar[][] appPositions;
+
+	/**
+	 * make the variables related to the position of the applications. The variables are not constrained yet.<br />
+	 * If web apps don't need any specific constraint, the hpc apps must have NO host (value -1) when no subtask is
+	 * executed on given interval.
+	 */
+	protected void makeAppPositions() {
+		appPositions = new IntVar[source.nbIntervals][index2AppName.length];
+		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
+			String appName = index2AppName[appIdx];
+			boolean isWeb = !source.getWebPowerModes(appName).isEmpty();
+			BoolVar[] executions = null;
+			if (!isWeb) {
+				executions = new BoolVar[source.nbIntervals];
+				hpcExecuteds.put(appName, executions);
+			}
+			for (int itv = 0; itv < appPositions.length; itv++) {
+				IntVar position = intVar("appPos_" + itv + "_" + appIdx, isWeb ? 0 : -1, source.nbServers() - 1);
+				appPositions[itv][appIdx] = position;
+				if (!isWeb) {
+					BoolVar executed = boolVar("appExec_" + itv + "_" + appIdx);
+					executions[itv] = executed;
+					arithm(position, ">=", 0).reifyWith(executed);
+				}
+			}
+		}
+	}
+
+	/**
+	 * ismigrateds[i][j] is true if app j is moved at interval i. first interval always returns false. a web app is
+	 * migrated if hoster changed, a hpc app is migrated if hoster was not -1 and hoster changed.
+	 */
+	protected BoolVar[][] isMigrateds = null;
+
+	protected void makeIsMigrateds() {
+		isMigrateds = new BoolVar[source.nbIntervals][index2AppName.length];
+		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
+			String prevHosName = source.previous.pos.get(index2AppName);
+			if (prevHosName != null && servName2Index.containsKey(prevHosName)) {
+				isMigrateds[0][appIdx] = boolVar("appMig_" + 0 + "_" + appIdx);
+				int prevIdx = servName2Index.get(prevHosName);
+				arithm(appPositions[0][appIdx], "!=", prevIdx).reifyWith(isMigrateds[0][appIdx]);
+			} else {
+				isMigrateds[0][appIdx] = boolVar(false);
+			}
+			String appName = index2AppName[appIdx];
+			boolean isWeb = source.webPowers(appName) != null;
+			for (int itv = 1; itv < source.nbIntervals; itv++) {
+				isMigrateds[itv][appIdx] = boolVar("appMig_" + itv + "_" + appIdx);
+				if (isWeb) {
+					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(isMigrateds[itv][appIdx]);
+				} else {
+					BoolVar moved = boolVar("appMoved_" + itv + "_" + appIdx);
+					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(moved);
+					and(hpcExecuteds.get(appName)[itv - 1], moved, hpcExecuteds.get(appName)[itv])
+					.reifyWith(isMigrateds[itv][appIdx]);
+				}
+			}
+		}
+	}
+
+	// migrationCosts[i] is the cost of vm migration at interval i
+	protected IntVar[] migrationCosts = null;
+
+	protected void makeMigrationCosts() {
+		migrationCosts = new IntVar[source.nbIntervals];
+		for (int itv = 0; itv < migrationCosts.length; itv++) {
+			IntVar[] coefs = new IntVar[index2AppName.length];
+			for (int i = 0; i < coefs.length; i++) {
+				coefs[i] = intVar(1);
+			}
+			IntVar[] appCost = new IntVar[index2AppName.length];
+			int maxTotalCost = 0;
+			for (int appIdx = 0; appIdx < appCost.length; appIdx++) {
+				int maxCost = coefs[appIdx].getUB();
+				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, maxCost);
+				maxTotalCost += maxCost;
+				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]).post();
+			}
+			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, maxTotalCost);
+			sum(appCost, "=", migrationCosts[itv]).post();
+		}
+	}
+
+	///////////////////////////////////////////
+	// cumulative tasks
 
 	/**
 	 * all tasks for cumulative : web, hpc, and specific power-limit-oriented tasks<br />
@@ -139,19 +288,18 @@ public class AppScheduler extends Model {
 
 	/** make one task corresponding to the web apps */
 	protected void makeWebTasks() {
-		for (Entry<String, List<PowerMode>> e : model.webs.entrySet()) {
-			String name = e.getKey();
-			int[] appprofits = model.webProfits(name);
-			int[] apppower = model.webPowers(name);
+		source.webNames().forEach(name -> {
+			int[] appprofits = source.webProfits(name);
+			int[] apppower = source.webPowers(name);
 			List<WebSubClass> l = new ArrayList<>();
 			webModes.put(name, l);
-			for (int i = 0; i < model.nbIntervals; i++) {
+			for (int i = 0; i < source.nbIntervals; i++) {
 				WebSubClass t = new WebSubClass(name + "_" + i, i, appprofits, apppower);
 				l.add(t);
 				addTask(t, t.power);
 				allProfits.add(t.profit);
 			}
-		}
+		});
 	}
 
 	//
@@ -196,33 +344,32 @@ public class AppScheduler extends Model {
 
 	/**
 	 * create a variable related to an existing interval.<br />
-	 * This variable can take a value from 0 to the number of intervals +1 {@link SchedulingModel#nbIntervals}
+	 * This variable can take a value from 0 to the number of intervals +1 {@link SchedulingProblem#nbIntervals}
 	 */
 	protected IntVar makeTimeSlotVar(String name) {
-		return bounded(name, 0, model.nbIntervals + 1);
+		return bounded(name, 0, source.nbIntervals + 1);
 	}
 
 	/** for each hpc task, the set of intervals it runs at */
 	protected HashMap<String, SetVar> hpcIntervals = new HashMap<>();
 
 	protected void makeHPCTasks() {
-		int[] allIntervals = new int[model.nbIntervals + 1];
+		int[] allIntervals = new int[source.nbIntervals + 1];
 		for (int i = 0; i < allIntervals.length; i++) {
 			allIntervals[i] = i;
 		}
-		for (Entry<String, HPC> e : model.hpcs.entrySet()) {
-			HPC h = e.getValue();
-			String name = e.getKey();
+		source.hpcNames().forEach(hpcName -> {
+			HPC h = source.getHPC(hpcName);
 			ArrayList<HPCSubTask> subtasksList = new ArrayList<>();
-			hpcTasks.put(name, subtasksList);
+			hpcTasks.put(hpcName, subtasksList);
 			HPCSubTask last = null;
 			IntVar[] hpcstarts = new IntVar[h.duration];
 			for (int i = 0; i < h.duration; i++) {
-				String subTaskName = name + "_" + i;
+				String subTaskName = hpcName + "_" + i;
 				IntVar start = makeTimeSlotVar(subTaskName + "_start");
 				IntVar end = makeTimeSlotVar(subTaskName + "_end");
 				BoolVar onSchedule = boolVar(subTaskName + "_onschedule");
-				arithm(end, "<=", h.deadline > 0 ? Math.min(h.deadline, model.nbIntervals) : model.nbIntervals)
+				arithm(end, "<=", h.deadline > 0 ? Math.min(h.deadline, source.nbIntervals) : source.nbIntervals)
 				.reifyWith(onSchedule);
 				IntVar power = enumerated(subTaskName + "_power", 0, h.power);
 				post(element(power, new int[] { 0, h.power }, onSchedule));
@@ -241,164 +388,20 @@ public class AppScheduler extends Model {
 				addTask(t, power);
 				hpcstarts[i] = start;
 			}
-			IntVar profit = enumerated(name + "_profit", 0, h.profit);
+			IntVar profit = enumerated(hpcName + "_profit", 0, h.profit);
 			allProfits.add(profit);
 			post(element(profit, new int[] { 0, h.profit }, last.onSchedule));
 
-			SetVar usedItvs = setVar(e.getKey() + "_itv", new int[] {}, allIntervals);
+			SetVar usedItvs = setVar(hpcName + "_itv", new int[] {}, allIntervals);
 			union(hpcstarts, usedItvs).post();
-			hpcIntervals.put(e.getKey(), usedItvs);
-			BoolVar[] executions = hpcExecuteds.get(name);
+			hpcIntervals.put(hpcName, usedItvs);
+			BoolVar[] executions = hpcExecuteds.get(hpcName);
+			assert executions != null : "hpc " + hpcName + " has null table of executions";
 			for (int itv = 0; itv < appPositions.length; itv++) {
-				member(intVar(itv), usedItvs).reifyWith(executions[itv]);
+				Constraint memb = member(intVar(itv), usedItvs);
+				memb.reifyWith(executions[itv]);
 			}
-		}
-	}
-
-	//////////////////////////////////////////////////////////////////////////
-	// identification of tasks by their index
-
-	/////
-	// name<->idx for apps
-	////
-
-	protected TObjectIntMap<String> appName2Index = new TObjectIntHashMap<>(10, 0.5f, -1);
-	protected String[] index2AppName = null;
-
-	////
-	// name<->idx for servers
-	////
-
-	protected TObjectIntMap<String> servName2Index = new TObjectIntHashMap<>();
-	protected String[] index2ServName = null;
-
-	/**
-	 * fill data in {@link #servName2Index}, {@link #index2ServName}, {@link #appName2Index}, {@link #index2AppName}
-	 */
-	protected void affectIndexes() {
-		List<String> appnames = Stream.concat(model.webs.keySet().stream(), model.hpcs.keySet().stream())
-				.collect(Collectors.toList());
-		index2AppName = appnames.toArray(new String[] {});
-		for (int i = 0; i < index2AppName.length; i++) {
-			appName2Index.put(index2AppName[i], i);
-		}
-		index2ServName = model.serversByName.keySet().toArray(new String[] {});
-		for (int i = 0; i < index2ServName.length; i++) {
-			servName2Index.put(index2ServName[i], i);
-		}
-	}
-
-	public int app(String appName) {
-		return appName2Index.get(appName);
-	}
-
-	public String app(int appIdx) {
-		if (appIdx < 0 || appIdx >= index2AppName.length) {
-			return null;
-		}
-		return index2AppName[appIdx];
-	}
-
-	public int serv(String servName) {
-		return servName2Index.get(servName);
-	}
-
-	public String serv(int servIdx) {
-		if (servIdx < 0 || servIdx >= index2ServName.length) {
-			return null;
-		}
-		return index2ServName[servIdx];
-	}
-
-	//////////////////////////////////////////////////////////////////////
-
-	/**
-	 * positions[i][j] is the position at interval i of the application j . if it is -1 (for an hpc app) then the
-	 * application is not run at interval i.
-	 */
-	protected IntVar[][] appPositions;
-
-	/**
-	 * make the variables related to the position of the applications. The variables are not constrained yet.<br />
-	 * If web apps don't need any specific constraint, the hpc apps must have NO host (value -1) when no subtask is
-	 * executed on given interval.
-	 */
-	protected void makeAppPositions() {
-		appPositions = new IntVar[model.nbIntervals][index2AppName.length];
-		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
-			String appName = index2AppName[appIdx];
-			boolean isWeb = model.webs.containsKey(appName);
-			BoolVar[] executions = null;
-			if (!isWeb) {
-				executions = new BoolVar[model.nbIntervals];
-				hpcExecuteds.put(appName, executions);
-			}
-			for (int itv = 0; itv < appPositions.length; itv++) {
-				IntVar position = intVar("appPos_" + itv + "_" + appIdx, isWeb ? 0 : -1, model.nbServers() - 1);
-				appPositions[itv][appIdx] = position;
-				if (!isWeb) {
-					BoolVar executed = boolVar("appExec_" + itv + "_" + appIdx);
-					executions[itv] = executed;
-					arithm(position, ">=", 0).reifyWith(executed);
-				}
-			}
-		}
-	}
-
-	/**
-	 * ismigrateds[i][j] is true if app j is moved at interval i. first interval always returns false. a web app is
-	 * migrated if hoster changed, a hpc app is migrated if hoster was not -1 and hoster changed.
-	 */
-	protected BoolVar[][] isMigrateds = null;
-
-	protected void makeIsMigrateds() {
-		isMigrateds = new BoolVar[model.nbIntervals][index2AppName.length];
-		for (int appIdx = 0; appIdx < index2AppName.length; appIdx++) {
-			String prevHosName = model.previous.pos.get(index2AppName);
-			if (prevHosName != null && servName2Index.containsKey(prevHosName)) {
-				isMigrateds[0][appIdx] = boolVar("appMig_" + 0 + "_" + appIdx);
-				int prevIdx = servName2Index.get(prevHosName);
-				arithm(appPositions[0][appIdx], "!=", prevIdx).reifyWith(isMigrateds[0][appIdx]);
-			} else {
-				isMigrateds[0][appIdx] = boolVar(false);
-			}
-			String appName = index2AppName[appIdx];
-			boolean isWeb = model.webs.containsKey(appName);
-			for (int itv = 1; itv < model.nbIntervals; itv++) {
-				isMigrateds[itv][appIdx] = boolVar("appMig_" + itv + "_" + appIdx);
-				if (isWeb) {
-					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(isMigrateds[itv][appIdx]);
-				} else {
-					BoolVar moved = boolVar("appMoved_" + itv + "_" + appIdx);
-					arithm(appPositions[itv][appIdx], "!=", appPositions[itv - 1][appIdx]).reifyWith(moved);
-					and(hpcExecuteds.get(appName)[itv - 1], moved, hpcExecuteds.get(appName)[itv])
-					.reifyWith(isMigrateds[itv][appIdx]);
-				}
-			}
-		}
-	}
-
-	// migrationCosts[i] is the cost of vm migration at interval i
-	protected IntVar[] migrationCosts = null;
-
-	protected void makeMigrationCosts() {
-		migrationCosts = new IntVar[model.nbIntervals];
-		for (int itv = 0; itv < migrationCosts.length; itv++) {
-			IntVar[] coefs = new IntVar[index2AppName.length];
-			for (int i = 0; i < coefs.length; i++) {
-				coefs[i] = intVar(1);
-			}
-			IntVar[] appCost = new IntVar[index2AppName.length];
-			int maxTotalCost = 0;
-			for (int appIdx = 0; appIdx < appCost.length; appIdx++) {
-				int maxCost = coefs[appIdx].getUB();
-				appCost[appIdx] = intVar("appcost_" + itv + "_" + appIdx, 0, maxCost);
-				maxTotalCost += maxCost;
-				times(isMigrateds[itv][appIdx], coefs[appIdx], appCost[appIdx]).post();
-			}
-			migrationCosts[itv] = intVar("migrationCost_" + itv, 0, maxTotalCost);
-			sum(appCost, "=", migrationCosts[itv]).post();
-		}
+		});
 	}
 
 	////////////////////////////////////////////////////////////////////////////
@@ -426,8 +429,8 @@ public class AppScheduler extends Model {
 	 * power if one is scheduled.
 	 */
 	protected void makeAppPowers() {
-		maxPower = model.serversByName.values().stream().mapToInt(s -> s.maxPower).sum();
-		appPowers = new IntVar[model.nbIntervals][];
+		maxPower = source.servers().mapToInt(e -> e.getValue().maxPower).sum();
+		appPowers = new IntVar[source.nbIntervals][];
 		for (int i = 0; i < appPowers.length; i++) {
 			appPowers[i] = new IntVar[index2AppName.length];
 		}
@@ -444,17 +447,17 @@ public class AppScheduler extends Model {
 		// power of each hpc task, 0 if the task is not on schedule.
 		for (Entry<String, List<HPCSubTask>> e : hpcTasks.entrySet()) {
 			int hidx = appName2Index.get(e.getKey());
-			int power = model.getHPC(e.getKey()).power;
+			int power = source.getHPC(e.getKey()).power;
 			BoolVar[] executions = hpcExecuteds.get(e.getKey());
 			for (int itv = 0; itv < appPowers.length; itv++) {
 				appPowers[itv][hidx] = intScaleView(executions[itv], power);
 			}
 		}
 		// now make all the [interval][server] power variables.
-		servPowers = new IntVar[model.nbIntervals][index2ServName.length];
+		servPowers = new IntVar[source.nbIntervals][index2ServName.length];
 		for (int servIdx = 0; servIdx < index2ServName.length; servIdx++) {
-			int maxpower = model.serversByName.get(index2ServName[servIdx]).maxPower;
-			for (int itv = 0; itv < model.nbIntervals; itv++) {
+			int maxpower = source.server(index2ServName[servIdx]).maxPower;
+			for (int itv = 0; itv < source.nbIntervals; itv++) {
 				IntVar[] powerOnServers = new IntVar[index2AppName.length];
 				for (int appIdx = 0; appIdx < powerOnServers.length; appIdx++) {
 					IntVar power = intVar("appPwrOn_" + itv + "_" + appIdx + "_" + servIdx, 0, maxpower);
@@ -474,8 +477,8 @@ public class AppScheduler extends Model {
 	 * add fake tasks that reduce the total power available on each interval
 	 */
 	protected void makeReductionTasks() {
-		for (int i = 0; i < model.nbIntervals; i++) {
-			int limit = model.getPower(i);
+		for (int i = 0; i < source.nbIntervals; i++) {
+			int limit = source.getPower(i);
 			// if we have a limit, we must reduce the power a this interval. anyhow, we also must consider the cost of
 			// migrating the vms
 			addTask(new Task(fixed(i), fixed(1), fixed(i + 1)),
@@ -489,7 +492,7 @@ public class AppScheduler extends Model {
 
 	/** add the profits and the powers of the tasks */
 	protected void makeCumulative() {
-		totalProfit = bounded("totalProfit", 0, model.getMaxProfit());
+		totalProfit = bounded("totalProfit", 0, source.getMaxProfit());
 		post(sum(allProfits.toArray(new IntVar[] {}), "=", totalProfit));
 		Task[] tasks = allTasks.toArray(new Task[] {});
 		IntVar[] heights = allPowers.toArray(new IntVar[] {});
@@ -501,7 +504,7 @@ public class AppScheduler extends Model {
 	//
 
 	protected void makePackings() {
-		model.resources().forEach(e -> {
+		source.resources().forEach(e -> {
 			String name = e.getKey();
 			ToIntFunction<String> res = e.getValue();
 			int[] serversCapas = new int[index2ServName.length + 1];
@@ -513,7 +516,7 @@ public class AppScheduler extends Model {
 			for (int i = 0; i < index2AppName.length; i++) {
 				appuse[i] = res.applyAsInt(index2AppName[i]);
 			}
-			for (int itv = 0; itv < model.nbIntervals; itv++) {
+			for (int itv = 0; itv < source.nbIntervals; itv++) {
 				IntVar[] serversLoads = new IntVar[serversCapas.length];
 				for (int servIdx = 0; servIdx < serversLoads.length; servIdx++) {
 					serversLoads[servIdx] = intVar(name + "_serverload_" + itv + "_" + (servIdx - 1), 0, serversCapas[servIdx]);
@@ -537,26 +540,52 @@ public class AppScheduler extends Model {
 	}
 
 	protected IntVar makeObjective() {
-		switch (model.objective) {
+		switch (source.objective) {
 		case PROFIT:
 			return totalProfit;
 		case PROFIT_POWER:
 			// obj = profit*maxpower*duration + sum(hpcsubtask.power)
 			return makeSubtaskSum("profit_power", HPCSubTask::getPower,
-					intScaleView(totalProfit, maxPower * model.nbIntervals));
+					intScaleView(totalProfit, maxPower * source.nbIntervals));
 		case PROFIT_ONSCHEDULE:
 			// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
 			return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,
-					intScaleView(totalProfit, model.hpcs.values().stream().mapToInt(h -> h.duration).sum()));
+					intScaleView(totalProfit, source.hpcNames().mapToInt(n -> source.getHPC(n).duration).sum()));
 		default:
-			throw new UnsupportedOperationException("case not supported here : " + model.objective);
+			throw new UnsupportedOperationException("case not supported here : " + source.objective);
 		}
 	}
 
-	// make the heuristics for searching a solution
+	/**
+	 * clear the caches and creates variables and constraints linked to a problem.
+	 *
+	 * @param source
+	 *          the model of the problem to solve
+	 * @return this.
+	 */
+	public AppScheduler withVars(SchedulingProblem source) {
+		clearCache();
+		this.source = source;
+		// first we create indexes for the servers and the applications
+		affectIndexes();
+		// then we create position variables for each interval and each app
+		makeAppPositions();
+		// we make migration cost at each interval : a VM is migrated if was running
+		// at previous interval and present interval is different from previous
+		makeIsMigrateds();
+		makeMigrationCosts();
 
-	protected AbstractStrategy[] makeHeuristics() {
+		makeWebTasks();
+		makeHPCTasks();
+		makeAppPowers();
+		makeReductionTasks();
+		makeCumulative();
+		makePackings();
+		return this;
+	}
 
+	// list the heuristics makers
+	protected Function<AppScheduler, AbstractStrategy<?>>[] makeHeuristics() {
 		return null;
 	}
 
@@ -569,7 +598,7 @@ public class AppScheduler extends Model {
 		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
 			String name = e.getKey();
 			ArrayList<PowerMode> list = new ArrayList<>();
-			List<PowerMode> modes = model.getWebPowerModes(name);
+			List<PowerMode> modes = source.getWebPowerModes(name);
 			for (WebSubClass w : e.getValue()) {
 				list.add(modes.get(s.getIntVal(w.mode)));
 			}
@@ -622,59 +651,54 @@ public class AppScheduler extends Model {
 	// Solve the problem
 	//
 
-	public SchedulingResult solve(SchedulingModel m) {
-		clearCache();
-		model = m;
-		// first we create indexes for the servers and the applications
-		affectIndexes();
-		// then we create position variables for each interval and each app
-		makeAppPositions();
-		// we make migration cost at each interval : a VM is migrated if was running
-		// at previous interval and present interval is different from previous
-		makeIsMigrateds();
-		makeMigrationCosts();
-
-		makeWebTasks();
-		makeHPCTasks();
-		makeAppPowers();
-		makeReductionTasks();
-		makeCumulative();
-		makePackings();
-
-		if (debug) {
-			getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
-
-				@Override
-				public String print() {
-					Variable[] vars = getSolver().getSearch().getVariables();
-					StringBuilder s = new StringBuilder(32);
-					for (Variable var : vars) {
-						s.append(var).append(' ');
-					}
-					return s.toString();
-				}
-			});
-			getSolver().showContradiction();
-			getSolver().showSolutions();
-		}
+	public SchedulingResult solve(SchedulingProblem m) {
+		withVars(m);
 		IntVar obj = makeObjective();
 		setObjective(true, obj);
-		AbstractStrategy<?>[] heuristics = makeHeuristics();
-		Solution s = new Solution(this);
-		if (heuristics == null || heuristics.length <= 1) {
-			if (heuristics != null) {
-				getSolver().setSearch(heuristics);
+		Function<AppScheduler, AbstractStrategy<?>>[] hMakers = makeHeuristics();
+		if (hMakers == null || hMakers.length <= 1) {
+			if (debug) {
+				getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
+
+					@Override
+					public String print() {
+						Variable[] vars = getSolver().getSearch().getVariables();
+						StringBuilder s = new StringBuilder(32);
+						for (Variable var : vars) {
+							s.append(var).append(' ');
+						}
+						return s.toString();
+					}
+				});
+				getSolver().showContradiction();
+				getSolver().showSolutions();
 			}
+			if (hMakers != null) {
+				getSolver().setSearch(hMakers[0].apply(this));
+			}
+			Solution s = new Solution(this);
 			while (getSolver().solve()) {
 				s.record();
 			}
 			return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
 		} else {
-			ParallelPortfolio pares = new ParallelPortfolio();
-			for (AbstractStrategy<?> as : heuristics) {
-				pares.addModel(cl);
+			ParallelPortfolio pares = new ParallelPortfolio(false);
+			for (Function<AppScheduler, AbstractStrategy<?>> hMaker : hMakers) {
+				AppScheduler other = new AppScheduler().withVars(getSource());
+				if (debug) {
+					other.getSolver().showContradiction();
+					other.getSolver().showSolutions();
+				}
+				other.getSolver().setSearch(hMaker.apply(other));
+				pares.addModel(other);
 			}
-			return null;
+
+			Solution s = null;
+			while (pares.solve()) {
+				s= new Solution(
+						pares.getBestModel());
+			}
+			return s != null ? extractResult(s) : null;
 		}
 	}
 
@@ -700,11 +724,11 @@ public class AppScheduler extends Model {
 		return ret;
 	}
 
-	public static SchedulingResult solv(SchedulingModel m) {
+	public static SchedulingResult solv(SchedulingProblem m) {
 		return new AppScheduler().solve(m);
 	}
 
-	public static SchedulingResult debugSolv(SchedulingModel m) {
+	public static SchedulingResult debugSolv(SchedulingProblem m) {
 		return new AppScheduler().withDebug(true).solve(m);
 	}
 

@@ -1,5 +1,5 @@
 
-package fr.lelouet.choco.limitpower;
+package fr.lelouet.choco.limitpower.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,18 +11,16 @@ import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import fr.lelouet.choco.limitpower.model.HPC;
-import fr.lelouet.choco.limitpower.model.PowerMode;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2015
  */
-public class SchedulingModel {
+public class SchedulingProblem {
 
 	@SuppressWarnings("unused")
-	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SchedulingModel.class);
+	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SchedulingProblem.class);
 
 	/** the objective to solve this problem */
 	public static enum Objective {
@@ -87,7 +85,7 @@ public class SchedulingModel {
 	 *          the profit of the mode
 	 * @return this
 	 */
-	public SchedulingModel addWeb(String name, int power, int profit) {
+	public SchedulingProblem addWeb(String name, int power, int profit) {
 		if (hpcs.containsKey(name)) {
 			throw new UnsupportedOperationException(
 					"name " + name + " is already used for the HPC apps, can't use it for web app");
@@ -129,7 +127,8 @@ public class SchedulingModel {
 	}
 
 	public List<PowerMode> getWebPowerModes(String name) {
-		return Collections.unmodifiableList(webs.get(name));
+		List<PowerMode> l = webs.get(name);
+		return l == null ? Collections.emptyList() : Collections.unmodifiableList(webs.get(name));
 	}
 
 	/**
@@ -259,6 +258,10 @@ public class SchedulingModel {
 
 	public Stream<Entry<String, Server>> servers() {
 		return serversByName.entrySet().stream();
+	}
+
+	public Stream<String> servNames() {
+		return serversByName.keySet().stream();
 	}
 
 	///////////////////

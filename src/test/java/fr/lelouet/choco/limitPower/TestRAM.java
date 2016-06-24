@@ -4,8 +4,8 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 public class TestRAM {
@@ -15,7 +15,7 @@ public class TestRAM {
 	 */
 	@Test
 	public void testScheduling() {
-		SchedulingModel m = new SchedulingModel();
+		SchedulingProblem m = new SchedulingProblem();
 		m.nbIntervals = 1;
 
 		m.addWeb("w0", 1, 2);

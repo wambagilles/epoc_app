@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import fr.lelouet.choco.limitpower.SchedulingModel;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**
@@ -17,12 +17,12 @@ import gnu.trove.map.hash.TObjectIntHashMap;
  */
 public class DataLoader {
 
-	public SchedulingModel loadRaw(String filename, TObjectIntHashMap<String> ram) {
+	public SchedulingProblem loadRaw(String filename, TObjectIntHashMap<String> ram) {
 		File f = new File(filename);
 		if (!f.exists()) {
 			return null;
 		}
-		SchedulingModel ret = new SchedulingModel();
+		SchedulingProblem ret = new SchedulingProblem();
 		ret.nbIntervals = 1;
 		ret.setResource("ram", ram::get);
 		try (BufferedReader br = new BufferedReader(new FileReader(f))) {
@@ -53,10 +53,10 @@ public class DataLoader {
 	 * @return a new model or null if an issue is encoutered during
 	 *         parsing/creation/whatever.
 	 */
-	public SchedulingModel load(int filenumber) {
+	public SchedulingProblem load(int filenumber) {
 		String location = "./resources/traces/" + filenumber + ".csv";
 		TObjectIntHashMap<String> ram = new TObjectIntHashMap<>();
-		SchedulingModel ret = loadRaw(location, ram);
+		SchedulingProblem ret = loadRaw(location, ram);
 		for (int i = 0; i < 120; i++) {
 			ret.server("s_" + i).maxPower = 10000;
 			ram.put("s_" + i, 10000);
@@ -64,25 +64,25 @@ public class DataLoader {
 		return ret;
 	}
 
-	public SchedulingModel[] loadAll() {
+	public SchedulingProblem[] loadAll() {
 		return IntStream.rangeClosed(0, 23).mapToObj(this::load).collect(Collectors.toList())
-				.toArray(new SchedulingModel[] {});
+				.toArray(new SchedulingProblem[] {});
 	}
 
-	public SchedulingModel[] loadRawAll() {
+	public SchedulingProblem[] loadRawAll() {
 		return IntStream.rangeClosed(0, 23)
 				.mapToObj(i -> loadRaw("./resources/traces/" + i + ".csv", new TObjectIntHashMap<>()))
-				.collect(Collectors.toList()).toArray(new SchedulingModel[] {});
+				.collect(Collectors.toList()).toArray(new SchedulingProblem[] {});
 	}
 
 	public static void main(String[] args) {
-		SchedulingModel[] models = new DataLoader().loadRawAll();
+		SchedulingProblem[] models = new DataLoader().loadRawAll();
 		for (int vi = 0; vi < models[0].nbApps(); vi++) {
 			String vname = "vm_" + vi;
 			System.err.print(vname);
 			int min = Integer.MAX_VALUE;
 			int max = 0;
-			for (SchedulingModel m : models) {
+			for (SchedulingProblem m : models) {
 				int power = m.getWebPowerModes(vname).get(0).power;
 				min = Math.min(min, power);
 				max = Math.max(max, power);
@@ -93,10 +93,10 @@ public class DataLoader {
 	}
 
 	public static void main2(String[] args) {
-		SchedulingModel[] models = new DataLoader().loadAll();
+		SchedulingProblem[] models = new DataLoader().loadAll();
 		System.err.println("itv\t#ram\t#pwr\tavgPWR\t#app\t#<.1%\t#<1%\t#<10%");
 		for (int i = 0; i < models.length; i++) {
-			SchedulingModel m = models[i];
+			SchedulingProblem m = models[i];
 			long avgpwr = m.streamMaxPwr().sum() / m.appNames().count();
 			long nb1pct = m.streamMaxPwr().filter(p -> p < 10000 / 1000).count();
 			long nb5pct = m.streamMaxPwr().filter(p -> p < 10000 / 100).count();

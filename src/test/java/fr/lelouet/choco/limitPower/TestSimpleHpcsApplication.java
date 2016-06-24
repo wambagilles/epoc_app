@@ -5,20 +5,20 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
-import fr.lelouet.choco.limitpower.SchedulingModel.Server;
 import fr.lelouet.choco.limitpower.model.HPC;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem.Server;
 
 public class TestSimpleHpcsApplication {
 
 	SchedulingResult r;
-	SchedulingModel m;
+	SchedulingProblem m;
 	Server server;
 
 	@BeforeMethod
 	public void cleanup() {
-		m = new SchedulingModel();
+		m = new SchedulingProblem();
 		server = m.server("server");
 	}
 

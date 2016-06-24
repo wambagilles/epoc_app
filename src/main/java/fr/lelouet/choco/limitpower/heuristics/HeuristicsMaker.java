@@ -35,9 +35,9 @@ public class HeuristicsMaker {
 	public static IntStrategy webHighProfit(AppScheduler scheduler) {
 		// map the app names to their interest.
 		HashMap<String, Integer> appInterest = new HashMap<>();
-		scheduler.getModel().webNames().forEach(n -> {
+		scheduler.getSource().webNames().forEach(n -> {
 			int minprofit = Integer.MAX_VALUE, maxProfit = Integer.MIN_VALUE, minProfitPower = 0, maxProfitPower = 0;
-			for (PowerMode m : scheduler.getModel().getWebPowerModes(n)) {
+			for (PowerMode m : scheduler.getSource().getWebPowerModes(n)) {
 				if (m.profit > maxProfit) {
 					maxProfit = m.profit;
 					maxProfitPower = m.power;

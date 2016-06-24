@@ -2,7 +2,7 @@ package fr.lelouet.choco.limitpower.model.generation;
 
 import java.util.Random;
 
-import fr.lelouet.choco.limitpower.SchedulingModel;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 
 /**
  * Generate data procedurally from a seed
@@ -21,7 +21,7 @@ public class Procedural {
 	 * @param model
 	 * @param seed
 	 */
-	public static void addHPC(SchedulingModel model, long seed) {
+	public static void addHPC(SchedulingProblem model, long seed) {
 		Random generator = new Random(seed);
 		int minNb, maxNb;
 		int nbwebs = model.nbWebs();

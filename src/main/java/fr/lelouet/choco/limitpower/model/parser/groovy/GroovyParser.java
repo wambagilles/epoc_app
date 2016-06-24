@@ -5,15 +5,15 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
-import fr.lelouet.choco.limitpower.SchedulingModel.NamedWeb;
-import fr.lelouet.choco.limitpower.SchedulingModel.Objective;
 import fr.lelouet.choco.limitpower.model.HPC;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem.NamedWeb;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 import groovy.lang.GroovyShell;
 
 public class GroovyParser {
 
-	protected SchedulingModel model = new SchedulingModel();
+	protected SchedulingProblem model = new SchedulingProblem();
 
 	GroovyShell shell = new GroovyShell();
 
@@ -29,12 +29,12 @@ public class GroovyParser {
 	}
 
 	@SuppressWarnings("resource")
-	public SchedulingModel parseFile(String filename) throws FileNotFoundException {
+	public SchedulingProblem parseFile(String filename) throws FileNotFoundException {
 		new BufferedReader(new FileReader(filename)).lines().forEach(this::parseLine);
 		return model;
 	}
 
-	public SchedulingModel getModel() {
+	public SchedulingProblem getModel() {
 		return model;
 	}
 
@@ -78,7 +78,7 @@ public class GroovyParser {
 
 	public static void main(String[] args) throws FileNotFoundException {
 		for (String file : args) {
-			SchedulingModel m = new GroovyParser().parseFile(file);
+			SchedulingProblem m = new GroovyParser().parseFile(file);
 			// System.out.println("solving : " + m);
 			System.out.println(AppScheduler.solv(m));
 		}

@@ -5,9 +5,9 @@ import java.util.Arrays;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.model.HPC;
 import fr.lelouet.choco.limitpower.model.PowerMode;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 import fr.lelouet.choco.limitpower.model.parser.groovy.GroovyParser;
 
 public class GroovyParserTest {
@@ -15,7 +15,7 @@ public class GroovyParserTest {
 	@Test
 	public void simpleTest() {
 		GroovyParser test = new GroovyParser();
-		SchedulingModel m = test.getModel();
+		SchedulingProblem m = test.getModel();
 
 		test.parseLine("web[\"w0\"].add(2,3)");
 		test.parseLine("web[\"w0\"].add(6,8)");

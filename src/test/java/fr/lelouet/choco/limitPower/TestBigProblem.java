@@ -10,8 +10,8 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 
 /**
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
@@ -21,7 +21,7 @@ public class TestBigProblem {
 
 	@Test
 	public void firstTest() {
-		SchedulingModel model = new SchedulingModel();
+		SchedulingProblem model = new SchedulingProblem();
 		model.nbIntervals = 1;
 
 		// 3 classes of servers, 5 servers each.

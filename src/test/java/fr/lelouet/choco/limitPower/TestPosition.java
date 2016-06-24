@@ -7,17 +7,17 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
-import fr.lelouet.choco.limitpower.SchedulingModel;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 
 public class TestPosition {
 
 	SchedulingResult r;
-	SchedulingModel m;
+	SchedulingProblem m;
 
 	@BeforeMethod
 	public void cleanup() {
-		m = new SchedulingModel();
+		m = new SchedulingProblem();
 		m.server("s1").maxPower = 1000;
 	}
 
