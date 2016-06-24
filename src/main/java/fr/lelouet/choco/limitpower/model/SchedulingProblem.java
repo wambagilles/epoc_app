@@ -70,6 +70,32 @@ public class SchedulingProblem {
 		return powerlimits.containsKey(idx) ? powerlimits.get(idx) : -1;
 	}
 
+// energy cost of migrative a VM
+
+	protected ToIntFunction<String> migrateCost = null;
+
+	/**
+	 * set the name-to-cost function to apply to applications. An application migrated adds up that uch energy cost.
+	 *
+	 * @param cost
+	 *          the function to set. Should return 0 for null or by default. if set to null, all app cost are 0.
+	 */
+	public void setMigrateCost(ToIntFunction<String> cost) {
+		migrateCost = cost;
+	}
+
+	/**
+	 * get the ost of migrating an app
+	 * 
+	 * @param appName
+	 *          the name of the app
+	 * @return the value associated to appname in the {@link #migrateCost}, or 0 if name is null, migrateCost is null, or
+	 *         the name is not associated in the migrateCost.
+	 */
+	public int migrateCost(String appName) {
+		return appName == null || migrateCost == null ? 0 : migrateCost.applyAsInt(appName);
+	}
+
 	// web apps
 
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
@@ -220,7 +246,7 @@ public class SchedulingProblem {
 	}
 
 	/////////////////////////
-	// server position
+	// servers
 	/////////////////////////
 
 	/** a server has a name, and a power(=cpu) capacity. */

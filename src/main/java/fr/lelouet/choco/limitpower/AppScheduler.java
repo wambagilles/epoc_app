@@ -206,7 +206,7 @@ public class AppScheduler extends Model {
 		for (int itv = 0; itv < migrationCosts.length; itv++) {
 			IntVar[] coefs = new IntVar[index2AppName.length];
 			for (int i = 0; i < coefs.length; i++) {
-				coefs[i] = intVar(1);
+				coefs[i] = intVar(source.migrateCost(index2AppName[i]));
 			}
 			IntVar[] appCost = new IntVar[index2AppName.length];
 			int maxTotalCost = 0;

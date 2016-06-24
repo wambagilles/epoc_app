@@ -44,7 +44,8 @@ public class TestPosition {
 		m.addWeb("web", 2, 3);
 		m.server("s0").maxPower = 1;
 		m.server("s1").maxPower = 2;
-		r = AppScheduler.solv(m);
+		AppScheduler s = new AppScheduler();
+		r = s.solve(m);
 		Assert.assertEquals(r.appHosters.get("web"), Arrays.asList("s1", "s1", "s1"), "" + r);
 		Assert.assertEquals(r.appHosters.get("hpc"), Arrays.asList("s0", null, "s0"), "" + r);
 	}
@@ -76,6 +77,8 @@ public class TestPosition {
 		m.addWeb("w1", 1, 1);
 		m.addWeb("w1", 2, 4);
 		m.addWeb("w1", 3, 6);
+
+		m.setMigrateCost(n -> 1);
 
 		r = new AppScheduler().solve(m);
 		Assert.assertEquals(r.profit, 7);
