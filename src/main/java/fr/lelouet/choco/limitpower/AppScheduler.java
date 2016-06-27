@@ -16,12 +16,10 @@ import org.chocosolver.solver.ParallelPortfolio;
 import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.constraints.Constraint;
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
-import org.chocosolver.solver.trace.IOutputFactory;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.SetVar;
 import org.chocosolver.solver.variables.Task;
-import org.chocosolver.solver.variables.Variable;
 import org.chocosolver.util.ESat;
 
 import fr.lelouet.choco.limitpower.model.HPC;
@@ -564,7 +562,7 @@ public class AppScheduler extends Model {
 	 *          the model of the problem to solve
 	 * @return this.
 	 */
-	public AppScheduler withVars(SchedulingProblem source) {
+	protected AppScheduler withVars(SchedulingProblem source) {
 		clearCache();
 		this.source = source;
 		// first we create indexes for the servers and the applications
@@ -587,6 +585,12 @@ public class AppScheduler extends Model {
 
 	/** from one objective, we generate several function, each creating an heuristic on a AppScheduler. */
 	protected Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> heuristicsStrategy = null;
+
+	public AppScheduler withHeuristics(
+			Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> heuristicsStrategy) {
+		this.heuristicsStrategy = heuristicsStrategy;
+		return this;
+	}
 
 	// list the heuristics makers
 	protected Function<AppScheduler, AbstractStrategy<?>>[] makeHeuristics() {
@@ -662,18 +666,18 @@ public class AppScheduler extends Model {
 		Function<AppScheduler, AbstractStrategy<?>>[] hMakers = makeHeuristics();
 		if (hMakers == null || hMakers.length <= 1) {
 			if (debug) {
-				getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
-
-					@Override
-					public String print() {
-						Variable[] vars = getSolver().getSearch().getVariables();
-						StringBuilder s = new StringBuilder(32);
-						for (Variable var : vars) {
-							s.append(var).append(' ');
-						}
-						return s.toString();
-					}
-				});
+// getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
+//
+// @Override
+// public String print() {
+// Variable[] vars = getSolver().getSearch().getVariables();
+// StringBuilder s = new StringBuilder(32);
+// for (Variable var : vars) {
+// s.append(var).append(' ');
+// }
+// return s.toString();
+// }
+// });
 				getSolver().showContradiction();
 				getSolver().showSolutions();
 			}

@@ -8,15 +8,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.chocosolver.solver.search.strategy.Search;
+import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
 import org.chocosolver.solver.search.strategy.strategy.IntStrategy;
+import org.chocosolver.solver.search.strategy.strategy.StrategiesSequencer;
 import org.chocosolver.solver.variables.IntVar;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.model.PowerMode;
+import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 
 /**
  * set the modes of the web apps to the highest profit.
@@ -32,7 +36,7 @@ public class HeuristicsMaker {
 	 * @param scheduler
 	 * @return
 	 */
-	public static IntStrategy webHighProfit(AppScheduler scheduler) {
+	public static IntStrategy webBestInterest(AppScheduler scheduler) {
 		// map the app names to their interest.
 		HashMap<String, Integer> appInterest = new HashMap<>();
 		scheduler.getSource().webNames().forEach(n -> {
@@ -46,8 +50,8 @@ public class HeuristicsMaker {
 					minprofit = m.profit;
 					minProfitPower = m.power;
 				}
-				appInterest.put(n, (maxProfit - minprofit) / (maxProfitPower - minProfitPower));
 			}
+			appInterest.put(n, (maxProfit - minprofit) / (maxProfitPower - minProfitPower));
 		});
 		// order the map by values in an array
 		@SuppressWarnings("unchecked")
@@ -58,6 +62,12 @@ public class HeuristicsMaker {
 
 		return Search.inputOrderUBSearch(Stream.of(arr).map(e -> scheduler.webModes.get(e.getKey())).flatMap(List::stream)
 				.map(wsc -> wsc.profit).collect(Collectors.toList()).toArray(new IntVar[] {}));
+	}
+
+	public static IntStrategy webHighestProfitFirst(AppScheduler scheduler) {
+		IntVar[] vars = scheduler.webModes.values().stream().flatMap(l -> l.stream()).map(wsc -> wsc.profit)
+				.collect(Collectors.toList()).toArray(new IntVar[] {});
+		return Search.inputOrderUBSearch(vars);
 	}
 
 	/**
@@ -83,5 +93,13 @@ public class HeuristicsMaker {
 		vars = Stream.concat(vars, Stream.of(scheduler.getVars()).filter(v -> v instanceof IntVar).map(v -> (IntVar) v));
 		return Search.inputOrderUBSearch(vars.collect(Collectors.toList()).toArray(new IntVar[] {}));
 	}
+
+	@SuppressWarnings("unchecked")
+	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFIT = o -> {
+		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(
+				HeuristicsMaker.webHighestProfitFirst(sc),
+				HeuristicsMaker.defaultVariables(sc));
+		return new Function[] { ret };
+	};
 
 }

@@ -86,7 +86,7 @@ public class SchedulingProblem {
 
 	/**
 	 * get the ost of migrating an app
-	 * 
+	 *
 	 * @param appName
 	 *          the name of the app
 	 * @return the value associated to appname in the {@link #migrateCost}, or 0 if name is null, migrateCost is null, or
@@ -128,6 +128,11 @@ public class SchedulingProblem {
 		return this;
 	}
 
+	public void removeApp(String name) {
+		webs.remove(name);
+		hpcs.remove(name);
+	}
+
 	public int[] webPowers(String name) {
 		List<PowerMode> l = webs.get(name);
 		if (l == null || l.isEmpty()) {
@@ -152,6 +157,10 @@ public class SchedulingProblem {
 		return ret;
 	}
 
+	/**
+	 * @param name
+	 * @return unmodifiable lit of power modes associated to given web app name.
+	 */
 	public List<PowerMode> getWebPowerModes(String name) {
 		List<PowerMode> l = webs.get(name);
 		return l == null ? Collections.emptyList() : Collections.unmodifiableList(webs.get(name));
@@ -176,6 +185,10 @@ public class SchedulingProblem {
 		public NamedWeb add(int power, int profit) {
 			addWeb(appName, power, profit);
 			return this;
+		}
+
+		public void remove() {
+			removeApp(appName);
 		}
 	}
 
@@ -297,7 +310,11 @@ public class SchedulingProblem {
 	protected HashMap<String, ToIntFunction<String>> resources = new HashMap<>();
 
 	public void setResource(String name, ToIntFunction<String> mapping) {
-		resources.put(name, mapping);
+		if (mapping == null) {
+			resources.remove(name);
+		} else {
+			resources.put(name, mapping);
+		}
 	}
 
 	public Stream<Entry<String, ToIntFunction<String>>> resources() {
