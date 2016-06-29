@@ -77,6 +77,13 @@ public class AppScheduler extends Model {
 		return this;
 	}
 
+	protected long timeLimit = -1;
+
+	public AppScheduler withTimeLimit(long ms) {
+		timeLimit = ms;
+		return this;
+	}
+
 	protected IntVar fixed(int i) {
 		return intVar(i);
 	}
@@ -176,6 +183,10 @@ public class AppScheduler extends Model {
 				}
 			}
 		}
+	}
+
+	public IntVar position(int itvIdx, int appIdx) {
+		return appPositions[itvIdx][appIdx];
 	}
 
 	/**
@@ -297,7 +308,7 @@ public class AppScheduler extends Model {
 	/**
 	 * for each web application, its modes
 	 */
-	public Map<String, List<WebSubClass>> webModes = new HashMap<>();
+	public Map<Integer, List<WebSubClass>> webModes = new HashMap<>();
 
 	/** make one task corresponding to the web apps */
 	protected void makeWebTasks() {
@@ -305,7 +316,7 @@ public class AppScheduler extends Model {
 			int[] appprofits = source.webProfits(name);
 			int[] apppower = source.webPowers(name);
 			List<WebSubClass> l = new ArrayList<>();
-			webModes.put(name, l);
+			webModes.put(app(name), l);
 			for (int i = 0; i < source.nbIntervals; i++) {
 				WebSubClass t = new WebSubClass(name + "_" + i, i, appprofits, apppower);
 				l.add(t);
@@ -449,8 +460,8 @@ public class AppScheduler extends Model {
 		}
 		// powers of each web tasks, retrieved from the power of the cumulative
 		// tasks
-		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
-			int widx = appName2Index.get(e.getKey());
+		for (Entry<Integer, List<WebSubClass>> e : webModes.entrySet()) {
+			int widx = e.getKey();
 			IntVar[] wpowers = e.getValue().stream().map(websubtask -> websubtask.power).collect(Collectors.toList())
 					.toArray(new IntVar[] {});
 			for (int itv = 0; itv < appPowers.length; itv++) {
@@ -622,14 +633,14 @@ public class AppScheduler extends Model {
 
 	protected SchedulingResult extractResult(Solution s) {
 		SchedulingResult ret = new SchedulingResult();
-		for (Entry<String, List<WebSubClass>> e : webModes.entrySet()) {
-			String name = e.getKey();
+		for (Entry<Integer, List<WebSubClass>> e : webModes.entrySet()) {
+			String name = app(e.getKey());
 			ArrayList<PowerMode> list = new ArrayList<>();
 			List<PowerMode> modes = source.getWebPowerModes(name);
 			for (WebSubClass w : e.getValue()) {
 				list.add(modes.get(s.getIntVal(w.mode)));
 			}
-			ret.webModes.put(e.getKey(), list);
+			ret.webModes.put(name, list);
 		}
 		for (Entry<String, List<HPCSubTask>> e : hpcTasks.entrySet()) {
 			List<Integer> l = new ArrayList<>();
@@ -713,6 +724,9 @@ public class AppScheduler extends Model {
 			}
 			if (hMakers != null) {
 				getSolver().setSearch(hMakers[0].apply(this));
+			}
+			if (timeLimit > 0) {
+				getSolver().limitTime(timeLimit);
 			}
 			Solution s = new Solution(this);
 			while (getSolver().solve()) {

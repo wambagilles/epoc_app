@@ -19,8 +19,11 @@ import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
 import org.chocosolver.solver.search.strategy.strategy.IntStrategy;
 import org.chocosolver.solver.search.strategy.strategy.StrategiesSequencer;
 import org.chocosolver.solver.variables.IntVar;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
+import fr.lelouet.choco.limitpower.AppScheduler.WebSubClass;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 
@@ -30,6 +33,8 @@ import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
  */
 public class HeuristicsMaker {
+
+	private static final Logger logger = LoggerFactory.getLogger(HeuristicsMaker.class);
 
 	/**
 	 * set the modes of the web apps to the highest profit. The web apps are first
@@ -117,14 +122,87 @@ public class HeuristicsMaker {
 			}
 		});
 		return Search.inputOrderUBSearch(vars.toArray(new IntVar[] {}));
-
 	}
+
+	public static AbstractStrategy<?> assignWebProfitThenServer(AppScheduler sc, IntVar profit, IntVar host,
+			int[] hostOrder) {
+		return Search.sequencer(Search.inputOrderUBSearch(profit), Search.intVarSearch(v -> {
+			for (int i : hostOrder) {
+				if (host.contains(i)) {
+					return host;
+				}
+			}
+			return null;
+		}, h -> {
+			for (int i : hostOrder) {
+				if (host.contains(i)) {
+					return i;
+				}
+			}
+			HeuristicsMaker.logger.warn("wtf " + host);
+			return host.getLB();
+		}, new IntVar[] { host }));
+	}
+
+	/**
+	 * sort the web apps indexes by the max profit of the web app
+	 *
+	 * @param as
+	 * @return
+	 */
+	public static int[] sortAppsByMaxProfit(AppScheduler as) {
+// map web idx to maxprofit
+		HashMap<Integer, Integer> idx2MaxProfit = new HashMap<>();
+		as.getSource().webNames().forEach(name -> {
+			int maxprofit = as.getSource().getWebPowerModes(name).stream().mapToInt(pm -> pm.profit).max().getAsInt();
+			idx2MaxProfit.put(as.app(name), maxprofit);
+		});
+		// sort the map entries by decreasing value
+		return idx2MaxProfit.entrySet().stream().sorted((e1, e2) -> e2.getValue() - e1.getValue()).mapToInt(e -> e.getKey())
+				.toArray();
+	}
+
+	public static int[] sortServersByRemaining(AppScheduler as, String resName) {
+		// from the name we get the resource
+		ToIntFunction<String> resource = as.getSource().getResource(resName);
+		// sever to remaining
+		HashMap<Integer, Integer> remaining = new HashMap<>();
+		for (int servIdx = 0; servIdx < as.getSource().nbServers(); servIdx++) {
+			remaining.put(servIdx, resource.applyAsInt(as.serv(servIdx)));
+		}
+		// then order the entries
+		return remaining.entrySet().stream().sorted((e1, e2) -> e1.getValue() - e2.getValue()).mapToInt(Entry::getKey)
+				.toArray();
+	}
+
+	public static AbstractStrategy<?> assignWebProfitThenServer(AppScheduler as, String resName) {
+		// sort web apps by decreasing profit
+		int[] appIdxSorted = HeuristicsMaker.sortAppsByMaxProfit(as);
+		// sort servers by increasing remaining
+		int[] serverIdxSorted = HeuristicsMaker.sortServersByRemaining(as, resName);
+		List<AbstractStrategy<?>> strats = new ArrayList<>();
+		for (int appIdx : appIdxSorted) {
+			List<WebSubClass> modes = as.webModes.get(appIdx);
+			for (int itv = 0; itv < modes.size(); itv++) {
+				strats.add(HeuristicsMaker.assignWebProfitThenServer(as, modes.get(itv).profit, as.position(itv, appIdx),
+						serverIdxSorted));
+			}
+		}
+		return Search.sequencer(strats.toArray(new AbstractStrategy[] {}));
+	}
+
 
 	@SuppressWarnings("unchecked")
 	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFIT = o -> {
-
-		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(webHighestProfitFirst(sc),
+		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(HeuristicsMaker.webHighestProfitFirst(sc),
 				Search.defaultSearch(sc));
+		return new Function[] { ret };
+	};
+
+	@SuppressWarnings("unchecked")
+	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFITREMAINRAM = o -> {
+		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(
+				HeuristicsMaker.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
 		return new Function[] { ret };
 	};
 
