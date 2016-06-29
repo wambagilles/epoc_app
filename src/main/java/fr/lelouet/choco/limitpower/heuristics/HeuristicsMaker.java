@@ -3,12 +3,14 @@
  */
 package fr.lelouet.choco.limitpower.heuristics;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -30,8 +32,9 @@ import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 public class HeuristicsMaker {
 
 	/**
-	 * set the modes of the web apps to the highest profit. The web apps are first ordered by their (max profit-min
-	 * profit)/(max profit power/min profit power) decreasing.
+	 * set the modes of the web apps to the highest profit. The web apps are first
+	 * ordered by their (max profit-min profit)/(max profit power/min profit
+	 * power) decreasing.
 	 *
 	 * @param scheduler
 	 * @return
@@ -82,23 +85,46 @@ public class HeuristicsMaker {
 				.collect(Collectors.toList()).toArray(new IntVar[] {}));
 	}
 
+
 	/**
-	 * all intVar are set to the highest value.
+	 * //FIXME bad heuristic<br />
+	 * set the resource use of the servers to max in a given order.
 	 *
-	 * @param scheduler
-	 * @return
 	 */
-	public static IntStrategy defaultVariables(AppScheduler scheduler) {
-		Stream<IntVar> vars = Stream.empty();
-		vars = Stream.concat(vars, Stream.of(scheduler.getVars()).filter(v -> v instanceof IntVar).map(v -> (IntVar) v));
-		return Search.inputOrderUBSearch(vars.collect(Collectors.toList()).toArray(new IntVar[] {}));
+	public static IntStrategy fillServersLeastReamining(AppScheduler scheduler, String resName) {
+		ToIntFunction<String> resource = scheduler.getSource().getResource(resName);
+		// first order the servers by their available resource on previous state.
+		HashMap<Integer, Integer> remaining = new HashMap<>();
+		for (int servIdx = 0; servIdx < scheduler.getSource().nbServers(); servIdx++) {
+			remaining.put(servIdx, resource.applyAsInt(scheduler.serv(servIdx)));
+		}
+		for (int appIdx = 0; appIdx < scheduler.getSource().nbApps(); appIdx++) {
+			String prevPosName = scheduler.getSource().previous.pos.get(scheduler.app(appIdx));
+			if (prevPosName != null) {
+				int prevPosIdx = scheduler.serv(prevPosName);
+				Integer prevPosRemain = remaining.get(prevPosIdx);
+				if (prevPosRemain != null) {
+					remaining.put(prevPosIdx, prevPosRemain - resource.applyAsInt(scheduler.app(appIdx)));
+				}
+			}
+		}
+
+		IntVar[][] resUseMat = scheduler.resourceServersUse.get(resName);
+		List<IntVar> vars = new ArrayList<>();
+		remaining.entrySet().stream().sorted((e1, e2) -> e1.getValue() - e2.getValue()).forEach(e -> {
+			for (IntVar[] element : resUseMat) {
+				vars.add(element[e.getKey()]);
+			}
+		});
+		return Search.inputOrderUBSearch(vars.toArray(new IntVar[] {}));
+
 	}
 
 	@SuppressWarnings("unchecked")
 	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFIT = o -> {
-		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(
-				HeuristicsMaker.webHighestProfitFirst(sc),
-				HeuristicsMaker.defaultVariables(sc));
+
+		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(webHighestProfitFirst(sc),
+				Search.defaultSearch(sc));
 		return new Function[] { ret };
 	};
 

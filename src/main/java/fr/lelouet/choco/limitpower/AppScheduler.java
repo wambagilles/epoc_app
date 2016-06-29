@@ -56,10 +56,24 @@ public class AppScheduler extends Model {
 		return source;
 	}
 
-	protected boolean debug = false;
+	protected boolean showContradictions = false;
 
-	public AppScheduler withDebug(boolean debug) {
-		this.debug = debug;
+	public AppScheduler withShowContradictions(boolean showContradictions) {
+		this.showContradictions = showContradictions;
+		return this;
+	}
+
+	protected boolean showDecisions = false;
+
+	public AppScheduler withShowDecisions(boolean showDecisions) {
+		this.showDecisions = showDecisions;
+		return this;
+	}
+
+	protected boolean showSolutions = false;
+
+	public AppScheduler withShowSolutions(boolean showSolutions) {
+		this.showSolutions = showSolutions;
 		return this;
 	}
 
@@ -502,9 +516,14 @@ public class AppScheduler extends Model {
 	// pack the resources
 	//
 
+	// resources->interval->servderIdx->use
+	public HashMap<String, IntVar[][]> resourceServersUse = new HashMap<>();
+
 	protected void makePackings() {
 		source.resources().forEach(e -> {
-			String name = e.getKey();
+			IntVar[][] serversUses = new IntVar[source.nbIntervals][];
+			String resName = e.getKey();
+			resourceServersUse.put(resName, serversUses);
 			ToIntFunction<String> res = e.getValue();
 			int[] serversCapas = new int[index2ServName.length + 1];
 			serversCapas[0] = Integer.MAX_VALUE - 1;
@@ -518,13 +537,13 @@ public class AppScheduler extends Model {
 			for (int itv = 0; itv < source.nbIntervals; itv++) {
 				IntVar[] serversLoads = new IntVar[serversCapas.length];
 				for (int servIdx = 0; servIdx < serversLoads.length; servIdx++) {
-					serversLoads[servIdx] = intVar(name + "_serverload_" + itv + "_" + (servIdx - 1), 0, serversCapas[servIdx]);
+					serversLoads[servIdx] = intVar(resName + "_serverload_" + itv + "_" + (servIdx - 1), 0, serversCapas[servIdx]);
 				}
+				serversUses[itv] = serversLoads;
 				binPacking(appPositions[itv], appuse, serversLoads, -1).post();
 			}
 		});
 	}
-
 	//
 	// define objective
 	//
@@ -655,6 +674,24 @@ public class AppScheduler extends Model {
 		webModes.clear();
 	}
 
+	// private void showDecisions() {
+	//
+	// getSolver().showDecisions(new
+	// IOutputFactory.DefaultDecisionMessage(getSolver()) {
+	//
+	// @Override
+	// public String print() {
+	// return "";
+	// // Variable[] vars = getSolver().getSearch().getVariables();
+	// // StringBuilder s = new StringBuilder(32);
+	// // for (Variable var : vars) {
+	// // s.append(var).append(' ');
+	// // }
+	// // return s.toString();
+	// }
+	// });
+	// }
+
 	//
 	// Solve the problem
 	//
@@ -665,20 +702,13 @@ public class AppScheduler extends Model {
 		setObjective(true, obj);
 		Function<AppScheduler, AbstractStrategy<?>>[] hMakers = makeHeuristics();
 		if (hMakers == null || hMakers.length <= 1) {
-			if (debug) {
-// getSolver().showDecisions(new IOutputFactory.DefaultDecisionMessage(getSolver()) {
-//
-// @Override
-// public String print() {
-// Variable[] vars = getSolver().getSearch().getVariables();
-// StringBuilder s = new StringBuilder(32);
-// for (Variable var : vars) {
-// s.append(var).append(' ');
-// }
-// return s.toString();
-// }
-// });
+			if (showContradictions) {
 				getSolver().showContradiction();
+			}
+			if (showDecisions) {
+				getSolver().showDecisions();
+			}
+			if (showSolutions) {
 				getSolver().showSolutions();
 			}
 			if (hMakers != null) {
@@ -692,9 +722,15 @@ public class AppScheduler extends Model {
 		} else {
 			ParallelPortfolio pares = new ParallelPortfolio(false);
 			for (Function<AppScheduler, AbstractStrategy<?>> hMaker : hMakers) {
-				AppScheduler other = new AppScheduler().withVars(getSource());
-				if (debug) {
+				// first solver is this, next solvers are created
+				AppScheduler other = hMaker == hMakers[0] ? this : new AppScheduler().withVars(getSource());
+				if (showContradictions) {
 					other.getSolver().showContradiction();
+				}
+				if (showDecisions) {
+					other.getSolver().showDecisions();
+				}
+				if (showSolutions) {
 					other.getSolver().showSolutions();
 				}
 				other.getSolver().setSearch(hMaker.apply(other));
@@ -705,6 +741,7 @@ public class AppScheduler extends Model {
 			while (pares.solve()) {
 				s= new Solution(
 						pares.getBestModel());
+				s.record();
 			}
 			return s != null ? extractResult(s) : null;
 		}
@@ -737,7 +774,7 @@ public class AppScheduler extends Model {
 	}
 
 	public static SchedulingResult debugSolv(SchedulingProblem m) {
-		return new AppScheduler().withDebug(true).solve(m);
+		return new AppScheduler().withShowContradictions(true).solve(m);
 	}
 
 }
