@@ -708,10 +708,14 @@ public class AppScheduler extends Model {
 	//
 
 	public SchedulingResult solve(SchedulingProblem m) {
+		long startTime = System.currentTimeMillis();
 		withVars(m);
+		long buildEnd = System.currentTimeMillis();
+		long stratEnd = -1, searchEnd = -1;
 		IntVar obj = makeObjective();
 		setObjective(true, obj);
 		Function<AppScheduler, AbstractStrategy<?>>[] hMakers = makeHeuristics();
+		SchedulingResult ret;
 		if (hMakers == null || hMakers.length <= 1) {
 			if (showContradictions) {
 				getSolver().showContradiction();
@@ -728,11 +732,13 @@ public class AppScheduler extends Model {
 			if (timeLimit > 0) {
 				getSolver().limitTime(timeLimit);
 			}
+			stratEnd = System.currentTimeMillis();
 			Solution s = new Solution(this);
 			while (getSolver().solve()) {
 				s.record();
 			}
-			return getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
+			searchEnd = System.currentTimeMillis();
+			ret = getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
 		} else {
 			ParallelPortfolio pares = new ParallelPortfolio(false);
 			for (Function<AppScheduler, AbstractStrategy<?>> hMaker : hMakers) {
@@ -757,8 +763,15 @@ public class AppScheduler extends Model {
 						pares.getBestModel());
 				s.record();
 			}
-			return s != null ? extractResult(s) : null;
+			ret = s != null ? extractResult(s) : null;
 		}
+		if (ret != null) {
+			ret.buildMS = buildEnd - startTime;
+			ret.stratMS = stratEnd - buildEnd;
+			ret.searchMS = searchEnd - stratEnd;
+			ret.extrMS = System.currentTimeMillis() - searchEnd;
+		}
+		return ret;
 	}
 
 	public static int maxIntArray(int... vals) {

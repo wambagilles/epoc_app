@@ -24,4 +24,12 @@ public class SchedulingResult {
 		return "" + profit + webModes + hpcStarts + appHosters;
 	}
 
+	public long buildMS = -1;
+
+	public long stratMS = -1;
+
+	public long searchMS = -1;
+
+	public long extrMS = -1;
+
 }

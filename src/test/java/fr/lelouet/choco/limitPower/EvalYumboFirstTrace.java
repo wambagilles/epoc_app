@@ -3,6 +3,8 @@
  */
 package fr.lelouet.choco.limitPower;
 
+import java.util.stream.IntStream;
+
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.heuristics.HeuristicsMaker;
@@ -16,7 +18,7 @@ import fr.lelouet.choco.limitpower.model.parser.yumbo.DataLoader;
  */
 public class EvalYumboFirstTrace {
 
-	public static void printData(double[][] data, int[] xLegend, double[] yLegend) {
+	public static void printData(String[][] data, int[] xLegend, String[] yLegend) {
 		assert yLegend.length == data.length;
 		System.err.print(" ");
 		for (int x : xLegend) {
@@ -36,23 +38,39 @@ public class EvalYumboFirstTrace {
 
 	public static void main(String[] args) {
 		System.err.println("pb\tsolve\ttime");
-		double[] multipliers = { 1.3, 1.5, 1.7, 1.8, 1.9 };
-		int[] intervals = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23 };
-		double[][] values = new double[multipliers.length][intervals.length];
-		for (int multIdx = 0; multIdx < multipliers.length; multIdx++) {
-			for (int itvIdx = 0; itvIdx < 24; itvIdx++) {
-				SchedulingProblem p = new DataLoader().load(itvIdx);
-				DataLoader.injectLinearProfits(p, p.appNames(), multipliers[multIdx]);
-				p.nbIntervals = 1;
-				p.objective = Objective.PROFIT;
-				// p.setResource("ram", null);
-				long time = System.currentTimeMillis();
-				AppScheduler s = new AppScheduler();
-				s.withHeuristics(HeuristicsMaker.STRATEGY_HIGHPROFITREMAINRAM).withTimeLimit(60 * 2 * 1000);// limit search to
-																																																		// 5min
-				SchedulingResult res = s.solve(p);
-				values[multIdx][itvIdx] = res!=null?(1.0 * System.currentTimeMillis() - time) / 1000:-1;
-				EvalYumboFirstTrace.printData(values, intervals, multipliers);
+		double[] multipliers1 = { 1.1, 1.3, 1.5 };
+		double[] multipliers2 = { 1.7, 1.9, 2.1 };
+		String[] colLegend = new String[multipliers1.length * multipliers2.length];
+		for (int multIdx1 = 0; multIdx1 < multipliers1.length; multIdx1++) {
+			for (int multIdx2 = 0; multIdx2 < multipliers2.length; multIdx2++) {
+				colLegend[multIdx1 * multipliers2.length + multIdx2] = "" + multipliers1[multIdx1] + ";"
+						+ multipliers2[multIdx2];
+			}
+		}
+
+		int[] intervals = IntStream.rangeClosed(0, 10).toArray();
+
+		String[][] values = new String[multipliers1.length * multipliers2.length][intervals.length];
+
+		for (int multIdx1 = 0; multIdx1 < multipliers1.length; multIdx1++) {
+			for (int multIdx2 = 0; multIdx2 < multipliers2.length; multIdx2++) {
+				int row = multIdx1*multipliers2.length+multIdx2;
+				for (int itvIdx = 0; itvIdx < intervals.length; itvIdx++) {
+					int itv = intervals[itvIdx];
+					SchedulingProblem p = new DataLoader().load(itv);
+					DataLoader.injectLinearProfits(p, p.appNames(), multipliers1[multIdx1], multipliers2[multIdx2]);
+					p.nbIntervals = 1;
+					p.objective = Objective.PROFIT;
+					// p.setResource("ram", null);
+					long time = System.currentTimeMillis();
+					AppScheduler s = new AppScheduler();
+					s.withHeuristics(HeuristicsMaker.STRATEGY_HIGHPROFITREMAINRAM).withTimeLimit(60 * 2 * 1000);// limit search to
+					// 5min
+					SchedulingResult res = s.solve(p);
+					long ttime = System.currentTimeMillis() - time;
+					values[row][itvIdx] = res != null ? "" + 1.0 * ttime / 1000 + "(" + 100 * res.searchMS / ttime + "%)" : "NaN";
+					EvalYumboFirstTrace.printData(values, intervals, colLegend);
+				}
 			}
 		}
 	}
