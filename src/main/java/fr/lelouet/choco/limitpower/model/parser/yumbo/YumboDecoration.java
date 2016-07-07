@@ -4,6 +4,7 @@
 package fr.lelouet.choco.limitpower.model.parser.yumbo;
 
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -86,26 +87,6 @@ public class YumboDecoration {
 		return ret;
 	}
 
-	public int nbServers = 150;
-	public boolean bAddServers = true;
-
-	/**
-	 * generates a model according to traces. Since the traces contain VM ram and CPU load, we multiply those load by
-	 * 10000 to have a base value. In order to host those VMs, we also create servers.
-	 *
-	 * @param filenumber
-	 *          the number of the file to load traces from
-	 * @return a new model or null if an issue is encoutered during parsing/creation/whatever.
-	 */
-	public SchedulingProblem addServers(int itv, SchedulingProblem ret) {
-		TObjectIntHashMap<String> ram = new TObjectIntHashMap<>();
-		for (int i = 0; i < nbServers; i++) {
-			ret.server("s_" + i).maxPower = serverPWR;
-			ram.put("s_" + i, serverRAM);
-		}
-		return ret;
-	}
-
 	public double[] profitMults = null;
 
 	/**
@@ -130,12 +111,65 @@ public class YumboDecoration {
 		});
 	}
 
-	public SchedulingProblem load(int itv) {
-		SchedulingProblem ret = loadWebs(itv, null, new TObjectIntHashMap<>());
-		if (bAddServers) {
-			addServers(itv, ret);
+	public boolean bAddHPC = false;
+
+	/**
+	 * for each web app, add an HPC task of same memory, and number of intervalles is the minimum number of intervalle to
+	 * execute the total CPU of the app at 50% server load. eg if task load is 10%for each intervalle, we have 24
+	 * intervalles so app duration is ceil(10*24/50)=5.
+	 *
+	 * @param pb
+	 */
+	public void addHPC(SchedulingProblem pb, TObjectIntHashMap<String> ram) {
+		IntStream.range(0, cpu[0].length).forEach(vmi -> {
+			String name = "hpc_" + vmi;
+			int hpcRam = (int) (IntStream.range(0, cpu.length).mapToDouble(itv -> this.ram[itv][vmi]).max().getAsDouble()
+					* serverRAM);
+			ram.put(name, hpcRam);
+			int nbIntervalles = (int) Math.ceil(IntStream.range(0, cpu.length).mapToDouble(itv -> cpu[itv][vmi]).sum() * 2);
+			pb.addHPC(name, 0, nbIntervalles, serverPWR / 2, serverPWR * nbIntervalles / 2, -1);
+		});
+	}
+
+	/** the load of the servers wth regard to CPU/ram and web apps */
+	public int webLoad = 50;
+	public boolean bAddServers = true;
+
+	/**
+	 * generates servers.
+	 *
+	 * @return a new model or null if an issue is encoutered during parsing/creation/whatever.
+	 */
+	public SchedulingProblem addServers(SchedulingProblem ret, TObjectIntHashMap<String> ramm) {
+		double ramNeededServers = IntStream.range(0, cpu[0].length).mapToDouble(vmi -> {
+			return IntStream.range(0, cpu.length).mapToDouble(itv -> ram[itv][vmi]).max().getAsDouble();
+		}).sum();
+		System.err.println("ram requested servers : " + ramNeededServers);
+		double cpuNeededServers = IntStream.range(0, cpu[0].length).mapToDouble(vmi -> {
+			return IntStream.range(0, cpu.length).mapToDouble(itv -> cpu[itv][vmi]).max().getAsDouble();
+		}).sum();
+
+		System.err.println("cpu requested servers : " + cpuNeededServers);
+		int nbServers = (int) Math.ceil(Math.max(ramNeededServers, cpuNeededServers) * 100 / webLoad);
+		YumboDecoration.logger.info("requesting " + nbServers + " servers");
+
+		for (int i = 0; i < nbServers; i++) {
+			ret.server("s_" + i).maxPower = serverPWR;
+			ramm.put("s_" + i, serverRAM);
 		}
+		return ret;
+	}
+
+	public SchedulingProblem load(int itv) {
+		TObjectIntHashMap<String> ramm = new TObjectIntHashMap<>();
+		SchedulingProblem ret = loadWebs(itv, null, ramm);
 		injectLinearProfits(ret, ret.webNames());
+		if (bAddHPC) {
+			addHPC(ret, ramm);
+		}
+		if (bAddServers) {
+			addServers(ret, ramm);
+		}
 		return ret;
 	}
 

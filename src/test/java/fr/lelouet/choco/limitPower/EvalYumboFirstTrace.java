@@ -52,6 +52,7 @@ public class EvalYumboFirstTrace {
 		String[][] values = new String[multipliers1.length * multipliers2.length][intervals.length];
 
 		YumboDecoration generator = new YumboDecoration();
+		generator.bAddHPC = true;
 
 		for (int multIdx1 = 0; multIdx1 < multipliers1.length; multIdx1++) {
 			for (int multIdx2 = 0; multIdx2 < multipliers2.length; multIdx2++) {
