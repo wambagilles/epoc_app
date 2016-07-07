@@ -9,8 +9,7 @@ import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.heuristics.HeuristicsMaker;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
-import fr.lelouet.choco.limitpower.model.parser.yumbo.DataLoader;
+import fr.lelouet.choco.limitpower.model.parser.yumbo.YumboDecoration;
 
 /**
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
@@ -52,15 +51,15 @@ public class EvalYumboFirstTrace {
 
 		String[][] values = new String[multipliers1.length * multipliers2.length][intervals.length];
 
+		YumboDecoration generator = new YumboDecoration();
+
 		for (int multIdx1 = 0; multIdx1 < multipliers1.length; multIdx1++) {
 			for (int multIdx2 = 0; multIdx2 < multipliers2.length; multIdx2++) {
 				int row = multIdx1*multipliers2.length+multIdx2;
 				for (int itvIdx = 0; itvIdx < intervals.length; itvIdx++) {
 					int itv = intervals[itvIdx];
-					SchedulingProblem p = new DataLoader().load(itv);
-					DataLoader.injectLinearProfits(p, p.appNames(), multipliers1[multIdx1], multipliers2[multIdx2]);
-					p.nbIntervals = 1;
-					p.objective = Objective.PROFIT;
+					generator.profitMults = new double[] { multipliers1[multIdx1], multipliers2[multIdx2] };
+					SchedulingProblem p = generator.load(itv);
 					// p.setResource("ram", null);
 					long time = System.currentTimeMillis();
 					AppScheduler s = new AppScheduler();
