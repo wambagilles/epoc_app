@@ -1,7 +1,7 @@
 /**
  *
  */
-package fr.lelouet.choco.limitpower.heuristics;
+package fr.lelouet.choco.limitpower.model.objectives.heuristics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -24,8 +23,8 @@ import org.slf4j.LoggerFactory;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.AppScheduler.WebSubClass;
+import fr.lelouet.choco.limitpower.model.Heuristic;
 import fr.lelouet.choco.limitpower.model.PowerMode;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 
 /**
  * set the modes of the web apps to the highest profit.
@@ -37,9 +36,8 @@ public class HeuristicsMaker {
 	private static final Logger logger = LoggerFactory.getLogger(HeuristicsMaker.class);
 
 	/**
-	 * set the modes of the web apps to the highest profit. The web apps are first
-	 * ordered by their (max profit-min profit)/(max profit power/min profit
-	 * power) decreasing.
+	 * set the modes of the web apps to the highest profit. The web apps are first ordered by their (max profit-min
+	 * profit)/(max profit power/min profit power) decreasing.
 	 *
 	 * @param scheduler
 	 * @return
@@ -90,11 +88,9 @@ public class HeuristicsMaker {
 				.collect(Collectors.toList()).toArray(new IntVar[] {}));
 	}
 
-
 	/**
 	 * //FIXME bad heuristic<br />
 	 * set the resource use of the servers to max in a given order.
-	 *
 	 */
 	public static IntStrategy fillServersLeastReamining(AppScheduler scheduler, String resName) {
 		ToIntFunction<String> resource = scheduler.getSource().getResource(resName);
@@ -191,19 +187,10 @@ public class HeuristicsMaker {
 		return Search.sequencer(strats.toArray(new AbstractStrategy[] {}));
 	}
 
+	public static final Heuristic STRATEGY_HIGHPROFIT = sc -> new StrategiesSequencer(
+			HeuristicsMaker.webHighestProfitFirst(sc), Search.defaultSearch(sc));
 
-	@SuppressWarnings("unchecked")
-	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFIT = o -> {
-		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(HeuristicsMaker.webHighestProfitFirst(sc),
-				Search.defaultSearch(sc));
-		return new Function[] { ret };
-	};
-
-	@SuppressWarnings("unchecked")
-	public static final Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> STRATEGY_HIGHPROFITREMAINRAM = o -> {
-		Function<AppScheduler, AbstractStrategy<?>> ret = sc -> new StrategiesSequencer(
-				HeuristicsMaker.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
-		return new Function[] { ret };
-	};
+	public static final Heuristic STRATEGY_HIGHPROFITREMAINRAM = sc -> new StrategiesSequencer(
+			HeuristicsMaker.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
 
 }

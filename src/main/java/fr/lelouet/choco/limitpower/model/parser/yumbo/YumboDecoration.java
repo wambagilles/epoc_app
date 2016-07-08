@@ -10,9 +10,9 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fr.lelouet.choco.limitpower.model.Objective;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
 /**

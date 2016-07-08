@@ -15,7 +15,6 @@ import org.chocosolver.solver.Model;
 import org.chocosolver.solver.ParallelPortfolio;
 import org.chocosolver.solver.Solution;
 import org.chocosolver.solver.constraints.Constraint;
-import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
 import org.chocosolver.solver.variables.BoolVar;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.solver.variables.SetVar;
@@ -23,9 +22,9 @@ import org.chocosolver.solver.variables.Task;
 import org.chocosolver.util.ESat;
 
 import fr.lelouet.choco.limitpower.model.HPC;
+import fr.lelouet.choco.limitpower.model.Heuristic;
 import fr.lelouet.choco.limitpower.model.PowerMode;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -273,6 +272,11 @@ public class AppScheduler extends Model {
 
 	protected IntVar totalProfit;
 
+	public IntVar getProfit() {
+		makeCumulative();
+		return totalProfit;
+	}
+
 	//
 	// web tasks
 	//
@@ -337,7 +341,7 @@ public class AppScheduler extends Model {
 	 *
 	 * @author Guillaume Le Louët
 	 */
-	protected class HPCSubTask extends Task {
+	public class HPCSubTask extends Task {
 
 		HPC master;
 
@@ -433,7 +437,13 @@ public class AppScheduler extends Model {
 	//
 	// reduction tasks to reduce effective power at a given time
 	//
-	int maxPower = 0;
+
+	/** maxpower used at any given interval, sum of servers max powers. Can still be reduced by power limits */
+	int maxPower = -1;
+
+	public int getMaxPower() {
+		return maxPower;
+	}
 
 	/**
 	 * powers[i][j] is the power used at interval i by application j
@@ -516,6 +526,9 @@ public class AppScheduler extends Model {
 
 	/** add the profits and the powers of the tasks */
 	protected void makeCumulative() {
+		if (totalProfit != null) {
+			return;
+		}
 		totalProfit = bounded("totalProfit", 0, source.getMaxProfit());
 		post(sum(allProfits.toArray(new IntVar[] {}), "=", totalProfit));
 		Task[] tasks = allTasks.toArray(new Task[] {});
@@ -559,30 +572,25 @@ public class AppScheduler extends Model {
 	// define objective
 	//
 
-	protected IntVar makeSubtaskSum(String name, Function<HPCSubTask, IntVar> getter, IntVar initial) {
+	/**
+	 * create a variable which is the sum of extracted values from HPC subtasks
+	 *
+	 * @param name
+	 *          the name of the variable
+	 * @param getter
+	 *          the function to get the intvar from hpc subtasks
+	 * @param added
+	 *          IntVar to add to that sum, or null to add zero.
+	 * @return a new variable constrained to the sum of the intVar of the HPCSubtasks + added if not null.
+	 */
+	public IntVar makeSubtaskSum(String name, Function<HPCSubTask, IntVar> getter, IntVar added) {
 		IntVar ret = bounded(name, 0, IntVar.MAX_INT_BOUND);
 		// stream of the hpcsubtasks variables
 		Stream<IntVar> variables = hpcTasks.values().stream().flatMap(List::stream).map(getter);
-		List<IntVar> vars = Stream.concat(variables, Stream.of(initial)).collect(Collectors.toList());
-		post(sum(vars.toArray(new IntVar[] {}), "=", ret));
+		List<IntVar> vars = (added == null ? variables : Stream.concat(variables, Stream.of(added)))
+				.collect(Collectors.toList());
+		sum(vars.toArray(new IntVar[] {}), "=", ret).post();
 		return ret;
-	}
-
-	protected IntVar makeObjective() {
-		switch (source.objective) {
-		case PROFIT:
-			return totalProfit;
-		case PROFIT_POWER:
-			// obj = profit*maxpower*duration + sum(hpcsubtask.power)
-			return makeSubtaskSum("profit_power", HPCSubTask::getPower,
-					intScaleView(totalProfit, maxPower * source.nbIntervals));
-		case PROFIT_ONSCHEDULE:
-			// obj = profit*#subtasks + sum(hpcsubtask.onSchedule)
-			return makeSubtaskSum("profit_onschedule", HPCSubTask::getOnSchedule,
-					intScaleView(totalProfit, source.hpcNames().mapToInt(n -> source.getHPC(n).duration).sum()));
-		default:
-			throw new UnsupportedOperationException("case not supported here : " + source.objective);
-		}
 	}
 
 	/**
@@ -611,20 +619,6 @@ public class AppScheduler extends Model {
 		makeCumulative();
 		makePackings();
 		return this;
-	}
-
-	/** from one objective, we generate several function, each creating an heuristic on a AppScheduler. */
-	protected Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> heuristicsStrategy = null;
-
-	public AppScheduler withHeuristics(
-			Function<Objective, Function<AppScheduler, AbstractStrategy<?>>[]> heuristicsStrategy) {
-		this.heuristicsStrategy = heuristicsStrategy;
-		return this;
-	}
-
-	// list the heuristics makers
-	protected Function<AppScheduler, AbstractStrategy<?>>[] makeHeuristics() {
-		return heuristicsStrategy != null ? heuristicsStrategy.apply(source.objective) : null;
 	}
 
 	//
@@ -682,6 +676,7 @@ public class AppScheduler extends Model {
 		appPositions = null;
 		servName2Index.clear();
 		servPowers = null;
+		totalProfit = null;
 		webModes.clear();
 	}
 
@@ -712,9 +707,9 @@ public class AppScheduler extends Model {
 		withVars(m);
 		long buildEnd = System.currentTimeMillis();
 		long stratEnd = -1, searchEnd = -1;
-		IntVar obj = makeObjective();
+		IntVar obj = source.objective == null ? null : source.objective.getObjective(this);
 		setObjective(true, obj);
-		Function<AppScheduler, AbstractStrategy<?>>[] hMakers = makeHeuristics();
+		Heuristic[] hMakers = source.objective.getStrategies(this);
 		SchedulingResult ret;
 		if (hMakers == null || hMakers.length <= 1) {
 			if (showContradictions) {
@@ -727,7 +722,7 @@ public class AppScheduler extends Model {
 				getSolver().showSolutions();
 			}
 			if (hMakers != null) {
-				getSolver().setSearch(hMakers[0].apply(this));
+				getSolver().setSearch(hMakers[0].makeStrat(this));
 			}
 			if (timeLimit > 0) {
 				getSolver().limitTime(timeLimit);
@@ -741,7 +736,7 @@ public class AppScheduler extends Model {
 			ret = getSolver().isFeasible() == ESat.TRUE ? extractResult(s) : null;
 		} else {
 			ParallelPortfolio pares = new ParallelPortfolio(false);
-			for (Function<AppScheduler, AbstractStrategy<?>> hMaker : hMakers) {
+			for (Heuristic hMaker : hMakers) {
 				// first solver is this, next solvers are created
 				AppScheduler other = hMaker == hMakers[0] ? this : new AppScheduler().withVars(getSource());
 				if (showContradictions) {
@@ -753,7 +748,7 @@ public class AppScheduler extends Model {
 				if (showSolutions) {
 					other.getSolver().showSolutions();
 				}
-				other.getSolver().setSearch(hMaker.apply(other));
+				other.getSolver().setSearch(hMaker.makeStrat(other));
 				pares.addModel(other);
 			}
 

@@ -6,9 +6,9 @@ import java.io.FileReader;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.model.HPC;
+import fr.lelouet.choco.limitpower.model.Objective;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem.NamedWeb;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 import groovy.lang.GroovyShell;
 
 public class GroovyParser {
@@ -63,7 +63,12 @@ public class GroovyParser {
 		}
 
 		public TotalLink objective(String name) {
-			model.objective = Objective.valueOf(name);
+			name = name.toLowerCase();
+			for(Objective o : Objective.DEFAULTS){
+				if (o.getClass().getSimpleName().toLowerCase().equals(name)) {
+					model.objective=o;
+				}
+			}
 			return this;
 		}
 

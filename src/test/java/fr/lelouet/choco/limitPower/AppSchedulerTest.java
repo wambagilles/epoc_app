@@ -5,8 +5,8 @@ import org.testng.annotations.Test;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingResult;
+import fr.lelouet.choco.limitpower.model.Objective;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
-import fr.lelouet.choco.limitpower.model.SchedulingProblem.Objective;
 
 public class AppSchedulerTest {
 
@@ -17,7 +17,7 @@ public class AppSchedulerTest {
 	public void testBug() {
 		SchedulingProblem m = new SchedulingProblem();
 		m.server("server").maxPower = 1000;
-		m.objective = Objective.PROFIT_POWER;
+		m.objective = Objective.PROFITPOWER;
 		m.addHPC("a", 0, 2, 2, 2, 10);
 		SchedulingResult r = AppScheduler.solv(m);
 		Assert.assertNotNull(r);

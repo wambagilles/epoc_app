@@ -7,8 +7,8 @@ import java.util.stream.IntStream;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingResult;
-import fr.lelouet.choco.limitpower.heuristics.HeuristicsMaker;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
+import fr.lelouet.choco.limitpower.model.objectives.heuristics.HeuristicsMaker;
 import fr.lelouet.choco.limitpower.model.parser.yumbo.YumboDecoration;
 
 /**
@@ -64,6 +64,7 @@ public class EvalYumboFirstTrace {
 					// p.setResource("ram", null);
 					long time = System.currentTimeMillis();
 					AppScheduler s = new AppScheduler();
+
 					s.withHeuristics(HeuristicsMaker.STRATEGY_HIGHPROFITREMAINRAM).withTimeLimit(60 * 2 * 1000);// limit search to
 					// 5min
 					SchedulingResult res = s.solve(p);

@@ -11,6 +11,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import fr.lelouet.choco.limitpower.model.objectives.Profit;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -22,19 +23,7 @@ public class SchedulingProblem {
 	@SuppressWarnings("unused")
 	private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SchedulingProblem.class);
 
-	/** the objective to solve this problem */
-	public static enum Objective {
-		/** objective is to maximize profit of the applications */
-		PROFIT,
-		/** objective is to maximize profit, THEN to maximize the power use */
-		PROFIT_POWER,
-		/**
-		 * objecive is to maximize profit, THEN to maximize number of subtasks on schedule
-		 */
-		PROFIT_ONSCHEDULE
-	}
-
-	public Objective objective = Objective.PROFIT;
+	public Objective objective = Profit.INSTANCE;
 
 	public int nbIntervals = 6;
 
@@ -96,7 +85,7 @@ public class SchedulingProblem {
 		return appName == null || migrateCost == null ? 0 : migrateCost.applyAsInt(appName);
 	}
 
-	// web apps
+// web apps
 
 	protected LinkedHashMap<String, List<PowerMode>> webs = new LinkedHashMap<>();
 
@@ -204,7 +193,7 @@ public class SchedulingProblem {
 		return webs.size();
 	}
 
-	// HPC apps
+// HPC apps
 
 	protected LinkedHashMap<String, HPC> hpcs = new LinkedHashMap<>();
 
@@ -232,7 +221,7 @@ public class SchedulingProblem {
 		return hpcs.size();
 	}
 
-	// all apps
+// all apps
 
 	public Stream<String> appNames() {
 		return Stream.concat(hpcNames(), webNames());
@@ -242,9 +231,9 @@ public class SchedulingProblem {
 		return hpcs.size() + webs.size();
 	}
 
-	//
-	// tools
-	//
+//
+// tools
+//
 	/**
 	 * @return the sum of the maximum profit of all applications
 	 */
@@ -258,9 +247,9 @@ public class SchedulingProblem {
 		return "Model(intervals=" + nbIntervals + " obj=" + objective + ")" + hpcs + webs + powerlimits;
 	}
 
-	/////////////////////////
-	// servers
-	/////////////////////////
+/////////////////////////
+// servers
+/////////////////////////
 
 	/** a server has a name, and a power(=cpu) capacity. */
 	public class Server {
@@ -303,9 +292,9 @@ public class SchedulingProblem {
 		return serversByName.keySet().stream();
 	}
 
-	///////////////////
-	// resources
-	///////////////////
+///////////////////
+// resources
+///////////////////
 
 	protected HashMap<String, ToIntFunction<String>> resources = new HashMap<>();
 
@@ -325,9 +314,9 @@ public class SchedulingProblem {
 		return resources.get(name);
 	}
 
-	///////////////////
-	// previous position and modes
-	///////////////////
+///////////////////
+// previous position and modes
+///////////////////
 
 	/**
 	 * The class previous contains data just before the first interval. It gives the possiblity to find if an app is
