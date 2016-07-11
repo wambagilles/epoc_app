@@ -5,8 +5,6 @@ package fr.lelouet.choco.limitPower;
 
 import java.util.stream.IntStream;
 
-import org.testng.annotations.Test;
-
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.SchedulingResult;
 import fr.lelouet.choco.limitpower.model.SchedulingProblem;
@@ -17,7 +15,6 @@ import fr.lelouet.choco.limitpower.model.SchedulingProblem;
  */
 public class MultiHeuristicAppSchedulerTest {
 
-	@Test
 	public void test() {
 		SchedulingProblem pb = new SchedulingProblem();
 		pb.nbIntervals = 2;
