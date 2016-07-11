@@ -7,6 +7,7 @@ import org.chocosolver.solver.variables.IntVar;
 
 import fr.lelouet.choco.limitpower.AppScheduler;
 import fr.lelouet.choco.limitpower.AppScheduler.HPCSubTask;
+import fr.lelouet.choco.limitpower.model.Heuristic;
 import fr.lelouet.choco.limitpower.model.Objective;
 
 /**
@@ -24,6 +25,24 @@ public class ProfitPower implements Objective {
 	public IntVar getObjective(AppScheduler s) {
 		return s.makeSubtaskSum("profit_power", HPCSubTask::getPower,
 				s.intScaleView(s.getProfit(), s.getMaxPower() * s.getSource().nbIntervals));
+	}
+
+	final Heuristic[] strategies;
+
+	/**
+	 *
+	 */
+	public ProfitPower() {
+		this((Heuristic[]) null);
+	}
+
+	public ProfitPower(Heuristic... strategies) {
+		this.strategies = strategies;
+	}
+
+	@Override
+	public Heuristic[] getStrategies() {
+		return strategies;
 	}
 
 }

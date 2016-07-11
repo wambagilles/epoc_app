@@ -15,9 +15,7 @@ public interface Objective {
 
 	public IntVar getObjective(AppScheduler scheduler);
 
-	public default Heuristic[] getStrategies(AppScheduler scheduler) {
-		return null;
-	}
+	public Heuristic[] getStrategies();
 
 	public static final Profit PROFIT = Profit.INSTANCE;
 

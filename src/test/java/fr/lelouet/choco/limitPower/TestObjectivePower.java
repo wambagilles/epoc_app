@@ -26,7 +26,7 @@ public class TestObjectivePower {
 	public void cleanup() {
 		m = new SchedulingProblem();
 		m.server("server").maxPower = 1000;
-		m.objective = Objective.PROFIT_POWER;
+		m.objective = Objective.PROFITPOWER;
 	}
 
 	/**

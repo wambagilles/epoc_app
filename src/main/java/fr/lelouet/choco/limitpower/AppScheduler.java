@@ -709,7 +709,7 @@ public class AppScheduler extends Model {
 		long stratEnd = -1, searchEnd = -1;
 		IntVar obj = source.objective == null ? null : source.objective.getObjective(this);
 		setObjective(true, obj);
-		Heuristic[] hMakers = source.objective.getStrategies(this);
+		Heuristic[] hMakers = source.objective.getStrategies();
 		SchedulingResult ret;
 		if (hMakers == null || hMakers.length <= 1) {
 			if (showContradictions) {
