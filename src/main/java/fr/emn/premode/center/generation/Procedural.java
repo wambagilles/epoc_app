@@ -1,9 +1,5 @@
 package fr.emn.premode.center.generation;
 
-import java.util.Random;
-
-import fr.emn.premode.center.SchedulingProblem;
-
 /**
  * Generate data procedurally from a seed
  *
@@ -21,20 +17,20 @@ public class Procedural {
 	 * @param model
 	 * @param seed
 	 */
-	public static void addHPC(SchedulingProblem model, long seed) {
-		Random generator = new Random(seed);
-		int minNb, maxNb;
-		int nbwebs = model.nbWebs();
-		if (nbwebs > 0) {
-			minNb = 0;
-			maxNb = 2 * nbwebs;
-		} else {
-			int nbservers = model.nbServers();
-			minNb = nbservers / 2;
-			maxNb = nbservers * 10;
-		}
-		int nbHPC = generator.nextInt(maxNb - minNb + 1) + minNb;
-
-	}
+// public static void addHPC(SchedulingProblem model, long seed) {
+// Random generator = new Random(seed);
+// int minNb, maxNb;
+// int nbwebs = model.nbWebs();
+// if (nbwebs > 0) {
+// minNb = 0;
+// maxNb = 2 * nbwebs;
+// } else {
+// int nbservers = model.nbServers();
+// minNb = nbservers / 2;
+// maxNb = nbservers * 10;
+// }
+// int nbHPC = generator.nextInt(maxNb - minNb + 1) + minNb;
+//
+// }
 
 }

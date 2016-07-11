@@ -186,10 +186,21 @@ public class HeuristicsMaker {
 		return Search.sequencer(strats.toArray(new AbstractStrategy[] {}));
 	}
 
+	/**
+	 * @param as
+	 * @return a new strategy setting the web apps to lowest power mode.
+	 */
+	public static AbstractStrategy<?> affectWebLowPower(Scheduler as) {
+		IntVar[] webpowers = as.webModes.values().stream().flatMap(l -> l.stream()).map(wsc -> wsc.power)
+				.toArray(IntVar[]::new);
+		return Search.inputOrderLBSearch(webpowers);
+	}
+
 	public static final Heuristic STRATEGY_HIGHPROFIT = sc -> new StrategiesSequencer(
 			HeuristicsMaker.webHighestProfitFirst(sc), Search.defaultSearch(sc));
 
 	public static final Heuristic STRATEGY_HIGHPROFITREMAINRAM = sc -> new StrategiesSequencer(
 			HeuristicsMaker.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
+
 
 }
