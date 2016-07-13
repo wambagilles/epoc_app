@@ -210,8 +210,8 @@ public class SchedulingProblem {
 		hpcs.put(name, model);
 	}
 
-	public void addHPC(String name, int start, int duration, int power, int benefit, int deadline) {
-		addHPC(name, new HPC(start, duration, power, benefit, deadline));
+	public void addHPC(String name, int start, int duration, int powerUse, int profit, int deadline) {
+		addHPC(name, new HPC(start, duration, powerUse, profit, deadline));
 	}
 
 	public Stream<String> hpcNames() {

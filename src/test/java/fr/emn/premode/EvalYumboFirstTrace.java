@@ -65,7 +65,7 @@ public class EvalYumboFirstTrace {
 					// p.setResource("ram", null);
 					long time = System.currentTimeMillis();
 					Scheduler s = new Scheduler();
-					p.objective = new Profit(HeuristicsMaker.STRATEGY_HIGHPROFITREMAINRAM);
+					p.objective = new Profit(HeuristicsMaker.WEB_HIGH_PROFIT_REMAIN_RAM);
 					s.withTimeLimit(60 * 2 * 1000);// limit search to
 					// 5min
 					Planning res = s.solve(p);

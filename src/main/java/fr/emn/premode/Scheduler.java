@@ -366,8 +366,14 @@ public class Scheduler extends Model {
 		}
 	}
 
+	/** hpc name -> list of subtasks of this app. each subtask ha a duration of 1 */
 	protected HashMap<String, List<HPCSubTask>> hpcTasks = new HashMap<>();
 
+	public List<HPCSubTask> getHPCTasks(String name) {
+		return hpcTasks.get(name);
+	}
+
+	/** hpc name-> interval-> is the hpc scheduled on this interval? */
 	protected HashMap<String, BoolVar[]> hpcExecuteds = new HashMap<>();
 
 	/**
@@ -600,7 +606,7 @@ public class Scheduler extends Model {
 	 *          the model of the problem to solve
 	 * @return this.
 	 */
-	protected Scheduler withVars(SchedulingProblem source) {
+	public Scheduler withVars(SchedulingProblem source) {
 		clearCache();
 		this.source = source;
 		// first we create indexes for the servers and the applications
@@ -679,24 +685,6 @@ public class Scheduler extends Model {
 		totalProfit = null;
 		webModes.clear();
 	}
-
-	// private void showDecisions() {
-	//
-	// getSolver().showDecisions(new
-	// IOutputFactory.DefaultDecisionMessage(getSolver()) {
-	//
-	// @Override
-	// public String print() {
-	// return "";
-	// // Variable[] vars = getSolver().getSearch().getVariables();
-	// // StringBuilder s = new StringBuilder(32);
-	// // for (Variable var : vars) {
-	// // s.append(var).append(' ');
-	// // }
-	// // return s.toString();
-	// }
-	// });
-	// }
 
 	//
 	// Solve the problem
