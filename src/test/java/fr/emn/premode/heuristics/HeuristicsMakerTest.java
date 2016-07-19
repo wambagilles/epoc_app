@@ -26,7 +26,7 @@ public class HeuristicsMakerTest {
 		pb.addHPC("hpc1", 0, 2, 1, 5, -1);// one duration instead of 2=> interest is 5/2
 		pb.addHPC("hpc2", 0, 2, 2, 2, -1);// profit 2 instead of 5=> interest is 2/4
 		Scheduler sc = new Scheduler().withVars(pb);
-		int[] indexes = HeuristicsMaker.sortHpcAppsByInterest(sc, n -> pb.getHPC(n).power);
+		int[] indexes = HeuristicsHelper.sortHpcAppsByInterest(sc, n -> pb.getHPC(n).power);
 		Assert.assertEquals(indexes[0], sc.app("hpc1"));
 		Assert.assertEquals(indexes[1], sc.app("hpc0"));
 		Assert.assertEquals(indexes[2], sc.app("hpc2"));

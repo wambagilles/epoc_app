@@ -4,15 +4,12 @@
 package fr.emn.premode.heuristics;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.chocosolver.solver.search.strategy.Search;
 import org.chocosolver.solver.search.strategy.strategy.AbstractStrategy;
@@ -26,51 +23,17 @@ import org.slf4j.LoggerFactory;
 import fr.emn.premode.Scheduler;
 import fr.emn.premode.Scheduler.HPCSubTask;
 import fr.emn.premode.Scheduler.WebSubClass;
-import fr.emn.premode.center.PowerMode;
 
 /**
  * set the modes of the web apps to the highest profit.
  *
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
  */
-public class HeuristicsMaker {
+public class HeuristicsHelper {
 
-	private static final Logger logger = LoggerFactory.getLogger(HeuristicsMaker.class);
+	private static final Logger logger = LoggerFactory.getLogger(HeuristicsHelper.class);
 
-	/**
-	 * set the modes of the web apps to the highest profit. The web apps are first ordered by their (max profit-min
-	 * profit)/(max profit power/min profit power) decreasing.
-	 *
-	 * @param scheduler
-	 * @return
-	 */
-	public static IntStrategy webBestInterest(Scheduler scheduler) {
-		// map the app names to their interest.
-		HashMap<String, Integer> appInterest = new HashMap<>();
-		scheduler.getSource().webNames().forEach(n -> {
-			int minprofit = Integer.MAX_VALUE, maxProfit = Integer.MIN_VALUE, minProfitPower = 0, maxProfitPower = 0;
-			for (PowerMode m : scheduler.getSource().getWebPowerModes(n)) {
-				if (m.profit > maxProfit) {
-					maxProfit = m.profit;
-					maxProfitPower = m.power;
-				}
-				if (m.profit < minprofit) {
-					minprofit = m.profit;
-					minProfitPower = m.power;
-				}
-			}
-			appInterest.put(n, (maxProfit - minprofit) / (maxProfitPower - minProfitPower));
-		});
-		// order the map by values in an array
-		@SuppressWarnings("unchecked")
-		Entry<String, Integer>[] arr = appInterest.entrySet().toArray(new Map.Entry[] {});
-		Arrays.sort(arr, (e1, e2) -> {
-			return e2.getValue() - e1.getValue();
-		});
-
-		return Search.inputOrderUBSearch(Stream.of(arr).map(e -> scheduler.webModes.get(e.getKey())).flatMap(List::stream)
-				.map(wsc -> wsc.profit).collect(Collectors.toList()).toArray(new IntVar[] {}));
-	}
+	public static final Heuristic DEFAULT_HEURISTIC = Search::defaultSearch;
 
 	/**
 	 * set the mode of webs to the lowest power use
@@ -99,7 +62,7 @@ public class HeuristicsMaker {
 					return i;
 				}
 			}
-			HeuristicsMaker.logger.warn("wtf " + host);
+			HeuristicsHelper.logger.warn("wtf " + host);
 			return host.getLB();
 		}, new IntVar[] { host }));
 	}
@@ -111,7 +74,7 @@ public class HeuristicsMaker {
 	 * @return
 	 */
 	public static int[] sortWebAppsByMaxProfit(Scheduler as) {
-// map web idx to maxprofit
+		// map web idx to maxprofit
 		HashMap<Integer, Integer> idx2MaxProfit = new HashMap<>();
 		as.getSource().webNames().forEach(name -> {
 			int maxprofit = as.getSource().getWebPowerModes(name).stream().mapToInt(pm -> pm.profit).max().getAsInt();
@@ -132,7 +95,7 @@ public class HeuristicsMaker {
 	 * @return a new int[]
 	 */
 	public static int[] sortHpcAppsByInterest(Scheduler as, ToIntFunction<String> weight) {
-// map hpc idx to interest
+		// map hpc idx to interest
 		HashMap<Integer, Integer> idx2MaxProfit = new HashMap<>();
 		as.getSource().hpcNames().forEach(name -> {
 			// multiply by 100 to avoid truncating precision
@@ -156,17 +119,10 @@ public class HeuristicsMaker {
 		return Search.inputOrderLBSearch(webpowers);
 	}
 
-	public static IntStrategy webHighestProfitFirst(Scheduler scheduler) {
-		IntVar[] vars = scheduler.webModes.values().stream().flatMap(l -> l.stream()).map(wsc -> wsc.profit)
-				.sorted((i1, i2) -> i1.getUB() - i2.getUB()).collect(Collectors.toList()).toArray(new IntVar[] {});
-		return Search.inputOrderUBSearch(vars);
-	}
-
 	/**
 	 * set the web tasks to their highest profit
 	 */
-	public static final Heuristic WEB_HIGH_PROFIT = sc -> new StrategiesSequencer(
-			HeuristicsMaker.webHighestProfitFirst(sc), Search.defaultSearch(sc));
+	public static final Heuristic WEB_HIGH_PROFIT = WebHighestProfitFirst.INSTANCE.chain(DEFAULT_HEURISTIC);
 
 	/**
 	 * sort the server index by their remaining resource in the scheduler source, decreasing
@@ -192,14 +148,14 @@ public class HeuristicsMaker {
 
 	public static AbstractStrategy<?> assignWebProfitThenServer(Scheduler as, String resName) {
 		// sort web apps by decreasing profit
-		int[] appIdxSorted = HeuristicsMaker.sortWebAppsByMaxProfit(as);
+		int[] appIdxSorted = HeuristicsHelper.sortWebAppsByMaxProfit(as);
 		// sort servers by increasing remaining
-		int[] serverIdxSorted = HeuristicsMaker.sortServersByRemaining(as, resName);
+		int[] serverIdxSorted = HeuristicsHelper.sortServersByRemaining(as, resName);
 		List<AbstractStrategy<?>> strats = new ArrayList<>();
 		for (int appIdx : appIdxSorted) {
 			List<WebSubClass> modes = as.webModes.get(appIdx);
 			for (int itv = 0; itv < modes.size(); itv++) {
-				strats.add(HeuristicsMaker.assignWebProfitThenServer(as, modes.get(itv).profit, as.position(itv, appIdx),
+				strats.add(HeuristicsHelper.assignWebProfitThenServer(as, modes.get(itv).profit, as.position(itv, appIdx),
 						serverIdxSorted));
 			}
 		}
@@ -210,11 +166,11 @@ public class HeuristicsMaker {
 	 * set the we task to their highest profit, placing it on the server with the least
 	 */
 	public static final Heuristic WEB_HIGH_PROFIT_REMAIN_RAM = sc -> new StrategiesSequencer(
-			HeuristicsMaker.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
+			HeuristicsHelper.assignWebProfitThenServer(sc, "ram"), Search.defaultSearch(sc));
 
 	/**
 	 * put hpc apps on schedule, with best interest first. Interest is profit/(product of resource weight * power)
-	 * 
+	 *
 	 * @param as
 	 *          the scheduler
 	 * @return a new strategy
@@ -232,13 +188,13 @@ public class HeuristicsMaker {
 			}
 			return ret;
 		};
-		int[] sortedHPCApps = HeuristicsMaker.sortHpcAppsByInterest(as, multipliedRes);
+		int[] sortedHPCApps = HeuristicsHelper.sortHpcAppsByInterest(as, multipliedRes);
 		return Search.inputOrderUBSearch(IntStream.of(sortedHPCApps).mapToObj(idx -> {
 			List<HPCSubTask> l = as.getHPCTasks(as.app(idx));
 			return l.get(l.size() - 1).getOnSchedule();
 		}).toArray(BoolVar[]::new));
 	}
 	public static final Heuristic HPC_INTEREST_FIRST = sc -> new StrategiesSequencer(
-			HeuristicsMaker.scheduleHPCBestInterest(sc), Search.defaultSearch(sc));
+			HeuristicsHelper.scheduleHPCBestInterest(sc), Search.defaultSearch(sc));
 
 }

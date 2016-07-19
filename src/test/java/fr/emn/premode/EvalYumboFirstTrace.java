@@ -9,7 +9,7 @@ import fr.emn.premode.Scheduler;
 import fr.emn.premode.Planning;
 import fr.emn.premode.center.SchedulingProblem;
 import fr.emn.premode.center.parser.yumbo.YumboDecoration;
-import fr.emn.premode.heuristics.HeuristicsMaker;
+import fr.emn.premode.heuristics.HeuristicsHelper;
 import fr.emn.premode.objectives.Profit;
 
 /**
@@ -65,7 +65,7 @@ public class EvalYumboFirstTrace {
 					// p.setResource("ram", null);
 					long time = System.currentTimeMillis();
 					Scheduler s = new Scheduler();
-					p.objective = new Profit(HeuristicsMaker.WEB_HIGH_PROFIT_REMAIN_RAM);
+					p.objective = new Profit(HeuristicsHelper.WEB_HIGH_PROFIT_REMAIN_RAM);
 					s.withTimeLimit(60 * 2 * 1000);// limit search to
 					// 5min
 					Planning res = s.solve(p);

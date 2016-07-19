@@ -11,6 +11,14 @@ import org.chocosolver.solver.search.strategy.strategy.StrategiesSequencer;
 import fr.emn.premode.Scheduler;
 
 /**
+ * A heuristic is an interface which produces a strategy from a
+ * {@link Scheduler}
+ * <p>
+ * The {@link #chain(Heuristic...)} method allow to chain several heuristic
+ * together. The resulting heuristic will produce a sequence strategy of its
+ * elements' strategy
+ * </p>
+ *
  * @author Guillaume Le Louët [guillaume.lelouet@gmail.com] 2016
  *
  */
@@ -36,7 +44,7 @@ public interface Heuristic {
 
 	/**
 	 * chain this heuristic with another, or some other, ones. Perform checks to ensure there is no nested chain.
-	 * 
+	 *
 	 * @param followers
 	 *          the heuristics to chain after this one ; can be null, in this case will return this.
 	 * @return a new heuristic chaining this to the followers if followers are not null, this if no follower.
